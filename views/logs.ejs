@@ -1,0 +1,64 @@
+<%- include("partials/header") %>
+
+<section class="section-heading">
+  <div>
+    <h1>Trade Logs</h1>
+    <p>Execution history, strategy attribution, and realised P/L tracking.</p>
+  </div>
+  <div class="heading-actions">
+    <a class="secondary-button" href="/settings">Settings</a>
+    <a class="secondary-button" href="/">Back to trading</a>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel-title">
+    <h2>Log File</h2>
+    <span><%= csvPath %></span>
+  </div>
+  <p class="muted-text">A CSV copy is written automatically whenever a trade is recorded.</p>
+</section>
+
+<section class="table-shell">
+  <table>
+    <thead>
+      <tr>
+        <th>Logged</th>
+        <th>Market</th>
+        <th>Symbol</th>
+        <th>Side</th>
+        <th>Qty</th>
+        <th>Price</th>
+        <th>Notional</th>
+        <th>Strategy</th>
+        <th>P/L $</th>
+        <th>P/L %</th>
+        <th>Provider</th>
+        <th>Reason</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (!logs.length) { %>
+        <tr><td colspan="12">No trade logs yet.</td></tr>
+      <% } %>
+      <% logs.forEach((log) => { %>
+        <tr>
+          <td><%= new Date(log.loggedAt).toLocaleString() %></td>
+          <td><%= log.market || "-" %></td>
+          <td><strong><%= log.symbol %></strong></td>
+          <td><%= log.side %></td>
+          <td><%= log.quantity %></td>
+          <td>$<%= Number(log.price || 0).toFixed(2) %></td>
+          <td>$<%= Number(log.notional || 0).toFixed(2) %></td>
+          <td><%= log.strategyName || log.strategyId || "-" %></td>
+          <td class="<%= Number(log.profitLoss || 0) >= 0 ? "positive" : "negative" %>">$<%= Number(log.profitLoss || 0).toFixed(2) %></td>
+          <td class="<%= Number(log.profitLossPercent || 0) >= 0 ? "positive" : "negative" %>"><%= Number(log.profitLossPercent || 0).toFixed(2) %>%</td>
+          <td><%= log.provider || "-" %></td>
+          <td><%= log.reason || "-" %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</section>
+
+<%- include("partials/footer") %>

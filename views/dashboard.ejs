@@ -1,0 +1,336 @@
+<%- include("partials/header") %>
+
+<section class="dashboard-head">
+  <div>
+    <p class="eyebrow"><%= marketStatus.name %> <%= marketStatus.isOpen ? "Open" : "Closed" %> · <%= marketStatus.localTime %></p>
+    <h1><%= desk.label %></h1>
+  </div>
+  <div class="status-strip">
+    <div>
+      <span>Mode</span>
+      <strong class="<%= settings.tradeMode === "live" ? "danger-text" : "" %>"><%= settings.tradeMode.toUpperCase() %></strong>
+    </div>
+    <div>
+      <span>Provider</span>
+      <strong><%= account.provider %></strong>
+    </div>
+    <div>
+      <span>Cash</span>
+      <strong>$<%= Number(account.cash || 0).toFixed(2) %></strong>
+    </div>
+    <div>
+      <span>Equity</span>
+      <strong>$<%= Number(account.equity || 0).toFixed(2) %></strong>
+    </div>
+  </div>
+</section>
+
+<nav class="desk-tabs" aria-label="Trading desks">
+  <% enabledDesks.forEach((item) => { %>
+    <a class="<%= desk.key === item.key ? "active" : "" %>" href="/trade/<%= item.key %>"><%= item.label %></a>
+  <% }) %>
+</nav>
+
+<% if (settings.note) { %>
+  <section class="notice">
+    <%= settings.note %>
+  </section>
+<% } %>
+
+<% if (account.error) { %>
+  <section class="notice warning">
+    Alpaca is currently unavailable: <%= account.error %>. Paper mode can still use the local simulator when Alpaca paper credentials are blank.
+  </section>
+<% } %>
+
+<section class="grid two-columns">
+  <form class="panel" method="post" action="<%= desk.paths.trade %>">
+    <div class="panel-title">
+      <h2>Quick Order</h2>
+      <span>Market or limit · day TIF</span>
+    </div>
+    <div class="form-grid">
+      <label>
+        Symbol
+        <input name="symbol" list="stock-list" placeholder="AAPL" required>
+      </label>
+      <label>
+        Side
+        <select name="side" required>
+          <option value="buy">Buy</option>
+          <option value="sell">Sell</option>
+        </select>
+      </label>
+      <label>
+        Quantity
+        <input type="number" min="1" step="1" name="quantity" required>
+      </label>
+      <label>
+        Order type
+        <select name="orderType" data-order-type>
+          <option value="market">Market</option>
+          <option value="limit">Limit</option>
+        </select>
+      </label>
+      <label>
+        Limit price
+        <input type="number" min="0" step="0.01" name="limitPrice" placeholder="Only for limit">
+      </label>
+      <label class="checkbox-line">
+        <input type="checkbox" name="confirmLive">
+        Confirm live order
+      </label>
+    </div>
+    <button class="primary-button" type="submit">Place Order</button>
+  </form>
+
+  <form class="panel" method="post" action="<%= desk.paths.runStrategy %>">
+    <div class="panel-title">
+      <h2>Strategy Runner</h2>
+      <span>Low margin · high turnover</span>
+    </div>
+    <div class="strategy-summary">
+      <div>
+        <span>Target</span>
+        <strong><%= strategy.targetProfitBps %> bps</strong>
+      </div>
+      <div>
+        <span>Stop</span>
+        <strong><%= strategy.stopLossBps %> bps</strong>
+      </div>
+      <div>
+        <span>Spread max</span>
+        <strong><%= strategy.maxSpreadBps %> bps</strong>
+      </div>
+      <div>
+        <span>Allocation</span>
+        <strong>$<%= strategy.maxAllocationPerTrade %></strong>
+      </div>
+    </div>
+    <label class="checkbox-line">
+      <input type="checkbox" name="execute">
+      Execute orders from this run
+    </label>
+    <label class="checkbox-line">
+      <input type="checkbox" name="confirmLive">
+      Confirm live strategy execution
+    </label>
+    <button class="primary-button" type="submit">Scan Strategy</button>
+  </form>
+</section>
+
+<section class="grid two-columns">
+  <form class="panel" method="post" action="<%= desk.paths.settings %>">
+    <div class="panel-title">
+      <h2>Trading Settings</h2>
+      <span><%= marketStatus.tradingHours %></span>
+    </div>
+    <div class="form-grid">
+      <label>
+        Mode
+        <select name="tradeMode" <%= !settings.deskLiveEnabled ? "disabled" : "" %>>
+          <option value="paper" <%= settings.tradeMode === "paper" ? "selected" : "" %>>Paper</option>
+          <option value="live" <%= settings.tradeMode === "live" ? "selected" : "" %>>Live</option>
+        </select>
+        <% if (!settings.deskLiveEnabled) { %><input type="hidden" name="tradeMode" value="paper"><% } %>
+      </label>
+      <label>
+        Market
+        <select name="market" <%= desk.key !== "us" ? "disabled" : "" %>>
+          <% markets.forEach((market) => { %>
+            <option value="<%= market.code %>" <%= settings.market === market.code ? "selected" : "" %>><%= market.name %></option>
+          <% }) %>
+        </select>
+        <% if (desk.key !== "us") { %><input type="hidden" name="market" value="<%= settings.market %>"><% } %>
+      </label>
+      <label>
+        Timezone
+        <select name="timezone">
+          <% ["Australia/Brisbane", "Australia/Sydney", "America/New_York", "Europe/London", "Asia/Singapore"].forEach((tz) => { %>
+            <option value="<%= tz %>" <%= settings.timezone === tz ? "selected" : "" %>><%= tz %></option>
+          <% }) %>
+        </select>
+      </label>
+      <label class="wide">
+        Watchlist
+        <input name="watchlist" value="<%= settings.watchlist.join(", ") %>">
+      </label>
+      <label class="checkbox-line">
+        <input type="checkbox" name="requireMarketOpen" <%= settings.requireMarketOpen ? "checked" : "" %>>
+        Require market open
+      </label>
+      <label class="checkbox-line">
+        <input type="checkbox" name="allowLiveTrading" <%= settings.allowLiveTrading ? "checked" : "" %> <%= !settings.deskLiveEnabled ? "disabled" : "" %>>
+        Enable live trading
+      </label>
+    </div>
+    <button class="secondary-button" type="submit">Save Settings</button>
+  </form>
+
+  <form class="panel" method="post" action="<%= desk.paths.strategy %>">
+    <div class="panel-title">
+      <h2>Scalping Rules</h2>
+      <span><%= strategyDefinition.name %></span>
+    </div>
+    <div class="form-grid">
+      <label class="wide">
+        Active strategy
+        <select name="activeStrategy">
+          <% strategies.forEach((item) => { %>
+            <option value="<%= item.id %>" <%= settings.strategyId === item.id ? "selected" : "" %>><%= item.name %></option>
+          <% }) %>
+        </select>
+      </label>
+      <label>
+        Target profit bps
+        <input type="number" name="targetProfitBps" min="1" value="<%= strategy.targetProfitBps %>">
+      </label>
+      <label>
+        Stop loss bps
+        <input type="number" name="stopLossBps" min="1" value="<%= strategy.stopLossBps %>">
+      </label>
+      <label>
+        Max spread bps
+        <input type="number" name="maxSpreadBps" min="0" value="<%= strategy.maxSpreadBps %>">
+      </label>
+      <label>
+        Min volume
+        <input type="number" name="minVolume" min="0" value="<%= strategy.minVolume %>">
+      </label>
+      <label>
+        Max allocation
+        <input type="number" name="maxAllocationPerTrade" min="1" value="<%= strategy.maxAllocationPerTrade %>">
+      </label>
+      <label>
+        Max positions
+        <input type="number" name="maxOpenPositions" min="1" value="<%= strategy.maxOpenPositions %>">
+      </label>
+      <label>
+        Cooldown seconds
+        <input type="number" name="cooldownSeconds" min="0" value="<%= strategy.cooldownSeconds %>">
+      </label>
+    </div>
+    <button class="secondary-button" type="submit">Save Rules</button>
+  </form>
+</section>
+
+<datalist id="stock-list">
+  <% stocks.forEach((stock) => { %>
+    <option value="<%= stock.symbol %>"><%= stock.name %></option>
+  <% }) %>
+  <% settings.watchlist.forEach((symbol) => { %>
+    <option value="<%= symbol %>"></option>
+  <% }) %>
+</datalist>
+
+<section class="panel">
+  <div class="panel-title">
+    <h2>Watchlist Quotes</h2>
+    <span>Yahoo Finance fallback data</span>
+  </div>
+  <div class="quote-grid">
+    <% settings.watchlist.forEach((symbol) => { const quote = quotes[symbol] || {}; %>
+      <article class="quote-tile">
+        <div>
+          <strong><%= symbol %></strong>
+          <span><%= quote.name || quote.error || "Unavailable" %></span>
+        </div>
+        <p>$<%= quote.price ? quote.price.toFixed(2) : "0.00" %></p>
+        <small class="<%= quote.changePercent >= 0 ? "positive" : "negative" %>">
+          <%= quote.changePercent ? quote.changePercent.toFixed(2) + "%" : "-" %>
+        </small>
+        <small>Spread <%= quote.spreadBps ? quote.spreadBps.toFixed(1) + " bps" : "N/A" %></small>
+      </article>
+    <% }) %>
+  </div>
+</section>
+
+<section class="grid two-columns">
+  <div class="panel">
+    <div class="panel-title">
+      <h2>Open Positions</h2>
+      <span><%= portfolio.length %> position(s)</span>
+    </div>
+    <div class="table-shell compact">
+      <table>
+        <thead>
+          <tr>
+            <th>Symbol</th>
+            <th>Qty</th>
+            <th>Entry</th>
+            <th>Last</th>
+            <th>P/L</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (!portfolio.length) { %>
+            <tr><td colspan="5">No open positions.</td></tr>
+          <% } %>
+          <% portfolio.forEach((position) => { const quote = quotes[position.symbol] || {}; const last = quote.price || position.lastPrice || position.avgEntryPrice; const pl = (last - position.avgEntryPrice) * position.quantity; %>
+            <tr>
+              <td><strong><%= position.symbol %></strong></td>
+              <td><%= position.quantity %></td>
+              <td>$<%= Number(position.avgEntryPrice || 0).toFixed(2) %></td>
+              <td>$<%= Number(last || 0).toFixed(2) %></td>
+              <td class="<%= pl >= 0 ? "positive" : "negative" %>">$<%= pl.toFixed(2) %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">
+      <h2>Recent Orders</h2>
+      <span>Latest 12</span>
+    </div>
+    <div class="activity-list">
+      <% if (!orders.length) { %><p>No orders yet.</p><% } %>
+      <% orders.forEach((order) => { %>
+        <article>
+          <strong><%= order.side.toUpperCase() %> <%= order.quantity %> <%= order.symbol %></strong>
+          <span><%= order.provider %> · <%= order.status %> · <%= new Date(order.createdAt).toLocaleString() %></span>
+        </article>
+      <% }) %>
+    </div>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel-title">
+    <h2>Trade Log</h2>
+    <span>Audit trail for simulator and broker orders</span>
+  </div>
+  <div class="table-shell compact">
+    <table>
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Mode</th>
+          <th>Side</th>
+          <th>Symbol</th>
+          <th>Qty</th>
+          <th>Price</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!trades.length) { %><tr><td colspan="7">No trades yet.</td></tr><% } %>
+        <% trades.forEach((trade) => { %>
+          <tr>
+            <td><%= new Date(trade.createdAt).toLocaleString() %></td>
+            <td><%= trade.mode %></td>
+            <td><%= trade.side %></td>
+            <td><strong><%= trade.symbol %></strong></td>
+            <td><%= trade.quantity %></td>
+            <td>$<%= Number(trade.price || 0).toFixed(2) %></td>
+            <td><%= trade.status %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<%- include("partials/footer") %>

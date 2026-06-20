@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><%= pageTitle ? `${pageTitle} - Click Trader` : "Click Trader" %></title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/">
+      <span class="brand-mark">CT</span>
+      <span>
+        <strong>Click Trader</strong>
+        <small>Day trading cockpit</small>
+      </span>
+    </a>
+    <% if (currentUser) { %>
+      <nav class="topnav">
+        <a href="<%= typeof desk !== "undefined" ? desk.paths.priceCheck : "/trade/aus/price-check" %>">Prices</a>
+        <a href="/settings">Settings</a>
+        <a href="/help">Help</a>
+        <form method="post" action="/logout">
+          <button class="link-button" type="submit">Logout</button>
+        </form>
+      </nav>
+    <% } %>
+  </header>
+  <main class="page">
+    <% if (flash.success.length || flash.error.length || flash.warning.length) { %>
+      <section class="alerts">
+        <% flash.success.forEach((message) => { %><div class="alert success"><%= message %></div><% }) %>
+        <% flash.warning.forEach((message) => { %><div class="alert warning"><%= message %></div><% }) %>
+        <% flash.error.forEach((message) => { %><div class="alert error"><%= message %></div><% }) %>
+      </section>
+    <% } %>

@@ -1,0 +1,20 @@
+<%- include("partials/header") %>
+
+<section class="section-heading">
+  <div>
+    <h1><%= pageTitle %></h1>
+    <p>Click Trader reference material.</p>
+  </div>
+  <div class="heading-actions">
+    <a class="secondary-button" href="/manual">Manual</a>
+    <a class="secondary-button" href="/help">Help</a>
+    <a class="secondary-button" href="/strategies">Strategies</a>
+    <a class="secondary-button" href="/settings">Settings</a>
+  </div>
+</section>
+
+<article class="doc-page">
+  <%- contentHtml %>
+</article>
+
+<%- include("partials/footer") %>

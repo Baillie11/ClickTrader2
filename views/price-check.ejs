@@ -1,0 +1,48 @@
+<%- include("partials/header") %>
+
+<section class="section-heading">
+  <div>
+    <h1><%= typeof desk !== "undefined" ? `${desk.label} Prices` : "Price Check" %></h1>
+    <p><%= settings.market.toUpperCase() %> watch universe via Yahoo Finance.</p>
+  </div>
+  <% if (typeof desk !== "undefined") { %>
+    <a class="secondary-button" href="<%= desk.paths.dashboard %>">Back to <%= desk.label %></a>
+  <% } %>
+</section>
+
+<section class="table-shell">
+  <table>
+    <thead>
+      <tr>
+        <th>Symbol</th>
+        <th>Name</th>
+        <th>Price</th>
+        <th>Bid</th>
+        <th>Ask</th>
+        <th>Spread</th>
+        <th>Change</th>
+        <th>Volume</th>
+        <th>Source</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% stocks.forEach((stock) => { const quote = quotes[stock.symbol] || {}; %>
+        <tr>
+          <td><strong><%= stock.symbol %></strong></td>
+          <td><%= stock.name %></td>
+          <td><%= quote.price ? quote.price.toFixed(2) : "N/A" %></td>
+          <td><%= quote.bid ? quote.bid.toFixed(2) : "-" %></td>
+          <td><%= quote.ask ? quote.ask.toFixed(2) : "-" %></td>
+          <td><%= quote.spreadBps ? quote.spreadBps.toFixed(1) + " bps" : "-" %></td>
+          <td class="<%= quote.changePercent >= 0 ? "positive" : "negative" %>">
+            <%= quote.changePercent ? quote.changePercent.toFixed(2) + "%" : "-" %>
+          </td>
+          <td><%= quote.volume ? quote.volume.toLocaleString() : "-" %></td>
+          <td><%= quote.source || quote.error || "Unavailable" %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</section>
+
+<%- include("partials/footer") %>

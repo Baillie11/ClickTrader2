@@ -1,0 +1,26 @@
+{
+  "name": "clicktrader2",
+  "version": "1.0.0",
+  "description": "Node.js rebuild of ClickTrader focused on fast low-margin day trading workflows.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "check": "node --check server.js && node --check src/dataStore.js && node --check src/fileSessionStore.js && node --check src/marketData.js && node --check src/marketHours.js && node --check src/strategyRegistry.js && node --check src/trading/alpacaEngine.js && node --check src/trading/simulatedEngine.js && node --check src/trading/tradingService.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "compression": "^1.7.4",
+    "connect-flash": "^0.1.1",
+    "dotenv": "^16.4.7",
+    "ejs": "^3.1.10",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "express-session": "^1.18.1",
+    "helmet": "^8.0.0",
+    "uuid": "^11.0.5"
+  }
+}

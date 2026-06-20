@@ -1,0 +1,190 @@
+<%- include("partials/header") %>
+
+<section class="section-heading">
+  <div>
+    <h1>Settings</h1>
+    <p>Markets, brokers, strategies, and personal trading preferences.</p>
+  </div>
+  <div class="heading-actions">
+    <a class="secondary-button" href="/settings/logs">Logs</a>
+    <a class="secondary-button" href="/help">Help</a>
+    <a class="secondary-button" href="/">Back to trading</a>
+  </div>
+</section>
+
+<form class="settings-form" method="post" action="/settings">
+  <section class="panel">
+    <div class="panel-title">
+      <h2>Personal Defaults</h2>
+      <span>Used across every trading desk</span>
+    </div>
+    <div class="form-grid">
+      <label>
+        Default desk
+        <select name="defaultDesk">
+          <% desks.forEach((desk) => { %>
+            <option value="<%= desk.key %>" <%= settings.personalization.defaultDesk === desk.key ? "selected" : "" %>><%= desk.label %></option>
+          <% }) %>
+        </select>
+      </label>
+      <label>
+        Timezone
+        <select name="timezone">
+          <% ["Australia/Brisbane", "Australia/Sydney", "America/New_York", "Europe/Berlin", "Asia/Shanghai", "Europe/London"].forEach((tz) => { %>
+            <option value="<%= tz %>" <%= settings.timezone === tz ? "selected" : "" %>><%= tz %></option>
+          <% }) %>
+        </select>
+      </label>
+      <label>
+        Display currency
+        <select name="currency">
+          <% ["AUD", "USD", "EUR", "CNY", "GBP"].forEach((currency) => { %>
+            <option value="<%= currency %>" <%= settings.personalization.currency === currency ? "selected" : "" %>><%= currency %></option>
+          <% }) %>
+        </select>
+      </label>
+      <label>
+        Risk profile
+        <select name="riskProfile">
+          <% ["conservative", "balanced", "aggressive"].forEach((profile) => { %>
+            <option value="<%= profile %>" <%= settings.personalization.riskProfile === profile ? "selected" : "" %>><%= profile %></option>
+          <% }) %>
+        </select>
+      </label>
+      <label>
+        Daily loss limit
+        <input type="number" min="0" step="1" name="dailyLossLimit" value="<%= settings.personalization.dailyLossLimit %>">
+      </label>
+      <label>
+        Max trades per day
+        <input type="number" min="1" step="1" name="maxTradesPerDay" value="<%= settings.personalization.maxTradesPerDay %>">
+      </label>
+      <label>
+        Global trade mode
+        <select name="globalTradeMode">
+          <option value="paper" <%= settings.tradeMode === "paper" ? "selected" : "" %>>Paper</option>
+          <option value="live" <%= settings.tradeMode === "live" ? "selected" : "" %>>Live</option>
+        </select>
+      </label>
+      <label class="checkbox-line">
+        <input type="checkbox" name="requireMarketOpen" <%= settings.requireMarketOpen ? "checked" : "" %>>
+        Require market open
+      </label>
+      <label class="checkbox-line">
+        <input type="checkbox" name="allowLiveTrading" <%= settings.allowLiveTrading ? "checked" : "" %>>
+        Enable live trading for supported broker adapters
+      </label>
+      <label class="checkbox-line">
+        <input type="checkbox" name="compactMode" <%= settings.personalization.compactMode ? "checked" : "" %>>
+        Compact dashboard mode
+      </label>
+      <label class="wide">
+        Personal notes
+        <input name="personalNotes" value="<%= settings.personalization.notes || "" %>">
+      </label>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-title">
+      <h2>Markets</h2>
+      <span>Select the desks available in the app</span>
+    </div>
+    <div class="market-settings-grid">
+      <% markets.forEach((market) => { const broker = settings.brokerAccounts[market.code] || {}; %>
+        <article class="market-settings-card">
+          <div class="market-card-head">
+            <label class="checkbox-line">
+              <input type="checkbox" name="enabledMarkets" value="<%= market.code %>" <%= settings.enabledMarkets.includes(market.code) ? "checked" : "" %>>
+              <strong><%= market.name %></strong>
+            </label>
+            <span><%= market.exchangeName || market.name %></span>
+          </div>
+
+          <label>
+            Active strategy
+            <select name="strategy_<%= market.code %>">
+              <% strategies.forEach((strategy) => { %>
+                <option value="<%= strategy.id %>" <%= settings.activeStrategies[market.code] === strategy.id ? "selected" : "" %>><%= strategy.name %></option>
+              <% }) %>
+            </select>
+          </label>
+
+          <label>
+            Watchlist
+            <input name="watchlist_<%= market.code %>" value="<%= (settings.marketWatchlists[market.code] || []).join(", ") %>">
+          </label>
+
+          <div class="broker-grid">
+            <label>
+              Broker
+              <input name="brokerName_<%= market.code %>" value="<%= broker.brokerName || "" %>" placeholder="e.g. Alpaca, IBKR, CMC">
+            </label>
+            <label>
+              Account label
+              <input name="accountLabel_<%= market.code %>" value="<%= broker.accountLabel || "" %>" placeholder="Paper, Live, Main">
+            </label>
+            <label>
+              Broker mode
+              <select name="brokerMode_<%= market.code %>">
+                <option value="paper" <%= broker.mode !== "live" ? "selected" : "" %>>Paper</option>
+                <option value="live" <%= broker.mode === "live" ? "selected" : "" %>>Live</option>
+              </select>
+            </label>
+            <label>
+              API key
+              <input name="apiKey_<%= market.code %>" value="<%= broker.apiKey || "" %>" autocomplete="off">
+            </label>
+            <label>
+              API secret
+              <span class="password-field">
+                <input type="password" name="apiSecret_<%= market.code %>" value="<%= broker.apiSecret || "" %>" autocomplete="off" data-password-input>
+                <button type="button" class="password-toggle" data-password-toggle>Show</button>
+              </span>
+            </label>
+            <label>
+              Endpoint
+              <input name="endpoint_<%= market.code %>" value="<%= broker.endpoint || "" %>" placeholder="Optional broker API URL">
+            </label>
+            <label class="wide">
+              Broker notes
+              <input name="brokerNotes_<%= market.code %>" value="<%= broker.notes || "" %>">
+            </label>
+          </div>
+        </article>
+      <% }) %>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-title">
+      <h2>Strategy Library</h2>
+      <span>Modular strategy slots</span>
+    </div>
+    <div class="strategy-library">
+      <% strategies.forEach((strategy) => { %>
+        <article>
+          <strong><%= strategy.name %></strong>
+          <span><%= strategy.description %></span>
+        </article>
+      <% }) %>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-title">
+      <h2>Guides</h2>
+      <span>Plain-English product help</span>
+    </div>
+    <div class="guide-links">
+      <a href="/manual">User Manual</a>
+      <a href="/help">Help Guide</a>
+      <a href="/strategies">Strategy Descriptions</a>
+      <a href="/settings/logs">Trade Logs</a>
+    </div>
+  </section>
+
+  <button class="primary-button settings-save" type="submit">Save Settings</button>
+</form>
+
+<%- include("partials/footer") %>

@@ -1,0 +1,26 @@
+<%- include("partials/header") %>
+
+<section class="auth-shell">
+  <form class="auth-panel" method="post" action="/register">
+    <h1>Create Account</h1>
+    <label>
+      Display name
+      <input type="text" name="displayName" required autocomplete="name">
+    </label>
+    <label>
+      Email
+      <input type="email" name="email" required autocomplete="email">
+    </label>
+    <label>
+      Password
+      <span class="password-field">
+        <input type="password" name="password" required autocomplete="new-password" data-password-input>
+        <button type="button" class="password-toggle" data-password-toggle>Show</button>
+      </span>
+    </label>
+    <button class="primary-button" type="submit">Register</button>
+    <p>Already registered? <a href="/login">Log in</a></p>
+  </form>
+</section>
+
+<%- include("partials/footer") %>
