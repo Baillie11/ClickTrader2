@@ -4,4 +4,5 @@ data/*.json
 data/logs/
 logs/
 npm-debug.log*
+*.zip
 .DS_Store
