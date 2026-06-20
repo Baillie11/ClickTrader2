@@ -58,6 +58,8 @@ Examples include Alpaca, Interactive Brokers, CMC, CommSec, and others.
 
 Click Trader stores broker account details in Settings, but not every broker is connected yet.
 
+For Australian live trading, Click Trader can use IBKR through the IBKR Client Portal Gateway when the gateway is running, authenticated, and reachable from the app.
+
 ## What Is a Strategy?
 
 A strategy is a set of rules that decides when a trade may be worth considering.

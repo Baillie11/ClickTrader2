@@ -27,7 +27,7 @@
 
 <nav class="desk-tabs" aria-label="Trading desks">
   <% enabledDesks.forEach((item) => { %>
-    <a class="<%= desk.key === item.key ? "active" : "" %>" href="/trade/<%= item.key %>"><%= item.label %></a>
+    <a class="<%= desk.key === item.key ? "active" : "" %>" href="<%= url(`/trade/${item.key}`) %>"><%= item.label %></a>
   <% }) %>
 </nav>
 
@@ -44,7 +44,7 @@
 <% } %>
 
 <section class="grid two-columns">
-  <form class="panel" method="post" action="<%= desk.paths.trade %>">
+  <form class="panel" method="post" action="<%= url(desk.paths.trade) %>">
     <div class="panel-title">
       <h2>Quick Order</h2>
       <span>Market or limit · day TIF</span>
@@ -84,7 +84,7 @@
     <button class="primary-button" type="submit">Place Order</button>
   </form>
 
-  <form class="panel" method="post" action="<%= desk.paths.runStrategy %>">
+  <form class="panel" method="post" action="<%= url(desk.paths.runStrategy) %>">
     <div class="panel-title">
       <h2>Strategy Runner</h2>
       <span>Low margin · high turnover</span>
@@ -120,7 +120,7 @@
 </section>
 
 <section class="grid two-columns">
-  <form class="panel" method="post" action="<%= desk.paths.settings %>">
+  <form class="panel" method="post" action="<%= url(desk.paths.settings) %>">
     <div class="panel-title">
       <h2>Trading Settings</h2>
       <span><%= marketStatus.tradingHours %></span>
@@ -167,7 +167,7 @@
     <button class="secondary-button" type="submit">Save Settings</button>
   </form>
 
-  <form class="panel" method="post" action="<%= desk.paths.strategy %>">
+  <form class="panel" method="post" action="<%= url(desk.paths.strategy) %>">
     <div class="panel-title">
       <h2>Scalping Rules</h2>
       <span><%= strategyDefinition.name %></span>

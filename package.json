@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "check": "node --check server.js && node --check src/dataStore.js && node --check src/fileSessionStore.js && node --check src/marketData.js && node --check src/marketHours.js && node --check src/strategyRegistry.js && node --check src/trading/alpacaEngine.js && node --check src/trading/simulatedEngine.js && node --check src/trading/tradingService.js"
+    "check": "node --check server.js && node --check src/dataStore.js && node --check src/fileSessionStore.js && node --check src/marketData.js && node --check src/marketHours.js && node --check src/strategyRegistry.js && node --check src/trading/alpacaEngine.js && node --check src/trading/ibkrEngine.js && node --check src/trading/simulatedEngine.js && node --check src/trading/tradingService.js"
   },
   "engines": {
     "node": ">=18"

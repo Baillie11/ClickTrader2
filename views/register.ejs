@@ -1,7 +1,7 @@
 <%- include("partials/header") %>
 
 <section class="auth-shell">
-  <form class="auth-panel" method="post" action="/register">
+  <form class="auth-panel" method="post" action="<%= url('/register') %>">
     <h1>Create Account</h1>
     <label>
       Display name
@@ -19,7 +19,7 @@
       </span>
     </label>
     <button class="primary-button" type="submit">Register</button>
-    <p>Already registered? <a href="/login">Log in</a></p>
+    <p>Already registered? <a href="<%= url('/login') %>">Log in</a></p>
   </form>
 </section>
 

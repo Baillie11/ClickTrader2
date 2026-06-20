@@ -6,13 +6,13 @@
     <p>Markets, brokers, strategies, and personal trading preferences.</p>
   </div>
   <div class="heading-actions">
-    <a class="secondary-button" href="/settings/logs">Logs</a>
-    <a class="secondary-button" href="/help">Help</a>
-    <a class="secondary-button" href="/">Back to trading</a>
+    <a class="secondary-button" href="<%= url('/settings/logs') %>">Logs</a>
+    <a class="secondary-button" href="<%= url('/help') %>">Help</a>
+    <a class="secondary-button" href="<%= url('/') %>">Back to trading</a>
   </div>
 </section>
 
-<form class="settings-form" method="post" action="/settings">
+<form class="settings-form" method="post" action="<%= url('/settings') %>">
   <section class="panel">
     <div class="panel-title">
       <h2>Personal Defaults</h2>
@@ -121,8 +121,8 @@
               <input name="brokerName_<%= market.code %>" value="<%= broker.brokerName || "" %>" placeholder="e.g. Alpaca, IBKR, CMC">
             </label>
             <label>
-              Account label
-              <input name="accountLabel_<%= market.code %>" value="<%= broker.accountLabel || "" %>" placeholder="Paper, Live, Main">
+              Account ID / label
+              <input name="accountLabel_<%= market.code %>" value="<%= broker.accountLabel || "" %>" placeholder="<%= market.code === "asx" ? "IBKR account ID, e.g. DU123456" : "Paper, Live, Main" %>">
             </label>
             <label>
               Broker mode
@@ -144,7 +144,11 @@
             </label>
             <label>
               Endpoint
-              <input name="endpoint_<%= market.code %>" value="<%= broker.endpoint || "" %>" placeholder="Optional broker API URL">
+              <input name="endpoint_<%= market.code %>" value="<%= broker.endpoint || "" %>" placeholder="<%= market.code === "asx" ? "https://localhost:5000/v1/api" : "Optional broker API URL" %>">
+            </label>
+            <label class="wide">
+              IBKR conid map
+              <input name="conidMap_<%= market.code %>" value="<%= broker.conidMap || "" %>" placeholder="Optional: CBA:123456, BHP:234567">
             </label>
             <label class="wide">
               Broker notes
@@ -177,10 +181,10 @@
       <span>Plain-English product help</span>
     </div>
     <div class="guide-links">
-      <a href="/manual">User Manual</a>
-      <a href="/help">Help Guide</a>
-      <a href="/strategies">Strategy Descriptions</a>
-      <a href="/settings/logs">Trade Logs</a>
+      <a href="<%= url('/manual') %>">User Manual</a>
+      <a href="<%= url('/help') %>">Help Guide</a>
+      <a href="<%= url('/strategies') %>">Strategy Descriptions</a>
+      <a href="<%= url('/settings/logs') %>">Trade Logs</a>
     </div>
   </section>
 

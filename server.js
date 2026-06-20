@@ -25,6 +25,38 @@ app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 app.set("trust proxy", 1);
 
+const BASE_PATH = (process.env.BASE_PATH || "").replace(/\/$/, "");
+
+function withBasePath(target) {
+  if (!BASE_PATH || !target || typeof target !== "string") return target;
+  if (!target.startsWith("/") || target.startsWith("//")) return target;
+  if (target === BASE_PATH || target.startsWith(`${BASE_PATH}/`)) return target;
+  return `${BASE_PATH}${target}`;
+}
+
+app.use((req, res, next) => {
+  if (BASE_PATH) {
+    if (req.url === BASE_PATH) {
+      req.url = "/";
+    } else if (req.url.startsWith(`${BASE_PATH}/`)) {
+      req.url = req.url.slice(BASE_PATH.length) || "/";
+    }
+  }
+
+  res.locals.basePath = BASE_PATH;
+  res.locals.url = withBasePath;
+
+  const originalRedirect = res.redirect.bind(res);
+  res.redirect = (statusOrUrl, maybeUrl) => {
+    if (typeof statusOrUrl === "number") {
+      return originalRedirect(statusOrUrl, withBasePath(maybeUrl));
+    }
+    return originalRedirect(withBasePath(statusOrUrl));
+  };
+
+  next();
+});
+
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(compression());
 app.use(express.urlencoded({ extended: true }));
@@ -168,7 +200,7 @@ function renderDocPage(res, fileName, pageTitle) {
 }
 
 const DESKS = [
-  { key: "aus", market: "asx", label: "AUS Trade", liveEnabled: false },
+  { key: "aus", market: "asx", label: "AUS Trade", liveEnabled: true },
   { key: "us", market: "nasdaq", label: "U.S. Trade", liveEnabled: true },
   { key: "germany", market: "xetra", label: "Germany Trade", liveEnabled: false },
   { key: "china", market: "sse", label: "China Trade", liveEnabled: false },
@@ -216,9 +248,11 @@ function getDeskSettings(baseSettings, deskKey) {
     strategyId,
     strategyDefinition: getStrategyById(strategyId),
     brokerAccount: baseSettings.brokerAccounts?.[market] || {},
-    note: desk.liveEnabled
-      ? null
-      : `${desk.label} uses Yahoo Finance market data and the local paper simulator until a live broker adapter is connected for ${getMarket(market).exchangeName || getMarket(market).name}.`
+    note: market === "asx"
+      ? "AUS live trading is supported through an authenticated IBKR Client Portal Gateway. Without IBKR live settings, AUS trades stay on the local paper simulator."
+      : desk.liveEnabled
+        ? null
+        : `${desk.label} uses Yahoo Finance market data and the local paper simulator until a live broker adapter is connected for ${getMarket(market).exchangeName || getMarket(market).name}.`
   };
 }
 
@@ -339,7 +373,7 @@ app.post("/forgot-password", (req, res) => {
     return res.redirect("/forgot-password");
   }
 
-  const resetLink = `${req.protocol}://${req.get("host")}/reset-password/${reset.token}`;
+  const resetLink = `${req.protocol}://${req.get("host")}${withBasePath(`/reset-password/${reset.token}`)}`;
   res.render("forgot-password", {
     pageTitle: "Forgot Password",
     resetLink
@@ -480,6 +514,7 @@ app.post("/settings", requireUser, (req, res) => {
       apiKey: String(req.body[`apiKey_${market.code}`] || "").trim(),
       apiSecret: String(req.body[`apiSecret_${market.code}`] || "").trim(),
       endpoint: String(req.body[`endpoint_${market.code}`] || "").trim(),
+      conidMap: String(req.body[`conidMap_${market.code}`] || "").trim(),
       notes: String(req.body[`brokerNotes_${market.code}`] || "").trim()
     };
   }

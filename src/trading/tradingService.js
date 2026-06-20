@@ -6,6 +6,11 @@ const {
   getAlpacaPositions,
   placeAlpacaOrder
 } = require("./alpacaEngine");
+const {
+  hasIbkrConfig,
+  getIbkrAccount,
+  placeIbkrOrder
+} = require("./ibkrEngine");
 const { summarizeAccount, placeSimulatedOrder } = require("./simulatedEngine");
 const { getStrategyById } = require("../strategyRegistry");
 
@@ -19,7 +24,11 @@ function assertTradingAllowed({ settings, confirmLive }) {
     if (!settings.allowLiveTrading || !confirmLive) {
       throw new Error("Live trading requires the live trading toggle and the per-order confirmation checkbox.");
     }
-    if (!hasAlpacaCredentials("live")) {
+    if (settings.market === "asx") {
+      if (!hasIbkrConfig(settings)) {
+        throw new Error("AUS live trading requires an IBKR broker account ID and Client Portal endpoint in Settings.");
+      }
+    } else if (!hasAlpacaCredentials("live")) {
       throw new Error("Live Alpaca credentials are not configured.");
     }
   }
@@ -34,7 +43,24 @@ function normalizeQuantity(quantity) {
 function createTradingService({ store }) {
   return {
     async getAccount({ user, settings }) {
-      if (settings.deskLiveEnabled && (settings.tradeMode === "live" || hasAlpacaCredentials("paper"))) {
+      if (settings.market === "asx" && settings.tradeMode === "live" && hasIbkrConfig(settings)) {
+        try {
+          const account = await getIbkrAccount(settings);
+          if (account) return account;
+        } catch (error) {
+          return {
+            provider: "IBKR Client Portal",
+            mode: settings.tradeMode,
+            status: "UNAVAILABLE",
+            error: error.message,
+            cash: 0,
+            buyingPower: 0,
+            equity: 0
+          };
+        }
+      }
+
+      if (settings.market !== "asx" && settings.deskLiveEnabled && (settings.tradeMode === "live" || hasAlpacaCredentials("paper"))) {
         try {
           const account = await getAlpacaAccount(settings.tradeMode);
           if (account) {
@@ -76,8 +102,18 @@ function createTradingService({ store }) {
       const beforePosition = store.getPortfolio(user.id).find((position) => {
         return position.symbol === cleanSymbol && (position.market || null) === (settings.market || null);
       });
-      const useAlpaca = settings.deskLiveEnabled && (settings.tradeMode === "live" || hasAlpacaCredentials("paper"));
-      const order = useAlpaca
+      const useIbkr = settings.market === "asx" && settings.tradeMode === "live" && hasIbkrConfig(settings);
+      const useAlpaca = !useIbkr && settings.market !== "asx" && settings.deskLiveEnabled && (settings.tradeMode === "live" || hasAlpacaCredentials("paper"));
+      const order = useIbkr
+        ? await placeIbkrOrder({
+          settings,
+          symbol: cleanSymbol,
+          side,
+          quantity: cleanQuantity,
+          orderType: cleanOrderType,
+          limitPrice: cleanLimitPrice
+        })
+        : useAlpaca
         ? await placeAlpacaOrder({
           mode: settings.tradeMode,
           symbol: cleanSymbol,

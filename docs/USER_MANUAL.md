@@ -78,7 +78,8 @@ Live trading is only available where a broker adapter exists and credentials are
 
 Current safe behaviour:
 
-- AUS, Germany, China, and England desks are paper-only.
+- AUS can route live orders through IBKR only when an authenticated IBKR Client Portal Gateway is configured.
+- Germany, China, and England desks are paper-only until live broker adapters are added.
 - U.S. Trade can use Alpaca where credentials are available.
 - Live trading also requires explicit confirmation in the UI.
 
@@ -247,6 +248,23 @@ The market-hours guard blocks trades outside market hours. This is intentional. 
 
 Yahoo Finance may not return data for every ticker. Check the symbol and market suffix assumptions.
 
-### AUS live trading does not work
+### AUS live trading through IBKR
 
-Correct. AUS is currently paper simulation only until an ASX-capable broker adapter is added.
+AUS live trading requires:
+
+- IBKR account with ASX trading permissions
+- IBKR Client Portal Gateway running and authenticated
+- Settings market broker set to IBKR
+- Account ID / label set to the IBKR account ID
+- Endpoint set to the gateway URL, usually `https://localhost:5000/v1/api`
+- Broker mode set to Live
+- App live trading enabled
+- Per-order live confirmation checked
+
+If automatic IBKR contract lookup cannot find a symbol, add an `IBKR conid map` in Settings:
+
+```text
+CBA:123456, BHP:234567
+```
+
+If using the default local Client Portal Gateway certificate, Node may reject the self-signed certificate. Use a trusted gateway endpoint or configure your local environment appropriately before live trading.

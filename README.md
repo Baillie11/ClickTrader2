@@ -9,6 +9,7 @@ Click Trader is a Node.js rebuild of the original Flask ClickTrader app. It keep
 - EJS server-rendered views
 - File-backed JSON persistence for shared hosting simplicity
 - Alpaca API for paper/live orders
+- IBKR Client Portal adapter for guarded Australian live order routing
 - Yahoo Finance for quotes and fallback data
 - Bootstrap-free custom CSS so the app has no frontend build step
 
