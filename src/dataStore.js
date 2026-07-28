@@ -8,45 +8,46 @@ const DEFAULT_SETTINGS = {
   usMarket: "nasdaq",
   timezone: "Australia/Brisbane",
   enabledMarkets: ["asx", "nasdaq"],
-  watchlist: ["AAPL", "MSFT", "NVDA", "TSLA", "AMD", "META"],
-  usWatchlist: ["AAPL", "MSFT", "NVDA", "TSLA", "AMD", "META"],
-  ausWatchlist: ["CBA", "BHP", "NAB", "WBC", "CSL", "WOW"],
+  watchlist: ["SOFI", "PLTR", "F", "SNAP", "MARA", "SQQQ", "TQQQ"],
+  usWatchlist: ["SOFI", "PLTR", "F", "SNAP", "MARA", "SQQQ", "TQQQ"],
+  ausWatchlist: ["CBA", "BHP", "NAB", "WBC", "FMG", "PLS"],
   marketWatchlists: {
-    asx: ["CBA", "BHP", "NAB", "WBC", "CSL", "WOW"],
-    nasdaq: ["AAPL", "MSFT", "NVDA", "TSLA", "AMD", "META"],
+    asx: ["CBA", "BHP", "NAB", "WBC", "FMG", "PLS"],
+    nasdaq: ["SOFI", "PLTR", "F", "SNAP", "MARA", "SQQQ", "TQQQ"],
     xetra: ["SAP", "SIE", "ALV", "DTE", "MBG", "BMW"],
     sse: ["600519", "601318", "600036", "601398", "601857", "600276"],
     lse: ["HSBA", "BP", "SHEL", "AZN", "ULVR", "VOD"]
   },
   brokerAccounts: {},
   activeStrategies: {
-    asx: "low-margin-scalp",
-    nasdaq: "low-margin-scalp",
-    xetra: "low-margin-scalp",
-    sse: "low-margin-scalp",
-    lse: "low-margin-scalp"
+    asx: "small-account-day-trader",
+    nasdaq: "small-account-day-trader",
+    xetra: "small-account-day-trader",
+    sse: "small-account-day-trader",
+    lse: "small-account-day-trader"
   },
   personalization: {
     defaultDesk: "aus",
     currency: "AUD",
     riskProfile: "balanced",
-    dailyLossLimit: 250,
-    maxTradesPerDay: 20,
+    dailyLossLimit: 20,
+    maxTradesPerDay: 10,
     compactMode: false,
     notes: ""
   },
   requireMarketOpen: true,
-  allowLiveTrading: false
+  allowLiveTrading: false,
+  paperPhaseStartedAt: null
 };
 
 const DEFAULT_STRATEGY = {
-  targetProfitBps: 35,
-  stopLossBps: 25,
-  maxSpreadBps: 20,
-  maxAllocationPerTrade: 500,
-  maxOpenPositions: 6,
+  targetProfitBps: 150,
+  stopLossBps: 75,
+  maxSpreadBps: 50,
+  maxAllocationPerTrade: 25,
+  maxOpenPositions: 3,
   cooldownSeconds: 60,
-  minVolume: 1000000,
+  minVolume: 100000,
   lastRunAt: null
 };
 
@@ -57,7 +58,7 @@ function nowIso() {
 function ensureStore(filePath) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   if (!fs.existsSync(filePath)) {
-    const startingCash = Number(process.env.SIMULATED_STARTING_CASH || 10000);
+    const startingCash = Number(process.env.SIMULATED_STARTING_CASH || 100);
     fs.writeFileSync(
       filePath,
       JSON.stringify({
@@ -105,6 +106,9 @@ function createStore(filePath) {
 
   function ensureUserBuckets(data, userId) {
     data.settings[userId] = { ...DEFAULT_SETTINGS, ...(data.settings[userId] || {}) };
+    if (data.settings[userId].paperPhaseStartedAt === undefined) {
+      data.settings[userId].paperPhaseStartedAt = null;
+    }
     data.settings[userId].usWatchlist = data.settings[userId].usWatchlist || data.settings[userId].watchlist || DEFAULT_SETTINGS.usWatchlist;
     data.settings[userId].ausWatchlist = data.settings[userId].ausWatchlist || DEFAULT_SETTINGS.ausWatchlist;
     data.settings[userId].usMarket = data.settings[userId].usMarket || (data.settings[userId].market === "asx" ? "nasdaq" : data.settings[userId].market) || "nasdaq";
@@ -132,9 +136,9 @@ function createStore(filePath) {
     data.tradeLogs[userId] = data.tradeLogs[userId] || [];
     data.scans[userId] = data.scans[userId] || null;
     data.simulatedAccounts[userId] = data.simulatedAccounts[userId] || {
-      cash: Number(process.env.SIMULATED_STARTING_CASH || 10000),
-      buyingPower: Number(process.env.SIMULATED_STARTING_CASH || 10000),
-      equity: Number(process.env.SIMULATED_STARTING_CASH || 10000),
+      cash: Number(process.env.SIMULATED_STARTING_CASH || 100),
+      buyingPower: Number(process.env.SIMULATED_STARTING_CASH || 100),
+      equity: Number(process.env.SIMULATED_STARTING_CASH || 100),
       positions: []
     };
   }
@@ -410,6 +414,28 @@ function createStore(filePath) {
       const data = read();
       ensureUserBuckets(data, userId);
       return data.scans[userId];
+    },
+
+    recordPaperPhaseStart(userId) {
+      return mutate((data) => {
+        ensureUserBuckets(data, userId);
+        if (!data.settings[userId].paperPhaseStartedAt) {
+          data.settings[userId].paperPhaseStartedAt = nowIso();
+        }
+      });
+    },
+
+    getPaperPhase(userId) {
+      const data = read();
+      ensureUserBuckets(data, userId);
+      const startedAt = data.settings[userId].paperPhaseStartedAt;
+      const daysRequired = 30;
+      if (!startedAt) {
+        return { startedAt: null, daysComplete: 0, daysRequired, graduated: false };
+      }
+      const msElapsed = Date.now() - new Date(startedAt).getTime();
+      const daysComplete = Math.min(Math.floor(msElapsed / (1000 * 60 * 60 * 24)), daysRequired);
+      return { startedAt, daysComplete, daysRequired, graduated: daysComplete >= daysRequired };
     }
   };
 }

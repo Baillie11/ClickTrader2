@@ -547,6 +547,103 @@ tr:last-child td {
   color: #f7fff8;
 }
 
+/* -----------------------------------------------------------------------
+   Paper phase progress banner
+----------------------------------------------------------------------- */
+.paper-phase-banner {
+  margin-bottom: 16px;
+  padding: 14px 18px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+
+.paper-phase-banner.graduated {
+  border-color: #b9dec7;
+  background: #f2fbf5;
+}
+
+.phase-info {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 16px;
+  margin-bottom: 10px;
+}
+
+.phase-info strong {
+  font-size: 0.95rem;
+}
+
+.phase-info span {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.phase-bar-wrap {
+  height: 6px;
+  border-radius: 99px;
+  background: var(--surface-soft);
+  overflow: hidden;
+}
+
+.phase-bar {
+  height: 100%;
+  border-radius: 99px;
+  background: var(--accent);
+  transition: width 0.4s ease;
+}
+
+.paper-phase-banner.graduated .phase-bar {
+  background: var(--positive);
+}
+
+/* -----------------------------------------------------------------------
+   Scanner panel
+----------------------------------------------------------------------- */
+#scanner-panel {
+  margin-bottom: 16px;
+}
+
+.scanner-actions {
+  display: flex;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.scanner-actions .secondary-button {
+  margin-top: 0;
+  padding: 8px 14px;
+  min-height: 36px;
+  font-size: 0.9rem;
+}
+
+#candidates-table td:last-child {
+  white-space: normal;
+  min-width: 160px;
+}
+
+tr.screener-hit td:first-child::after {
+  content: ' \2605';
+  color: var(--accent);
+  font-size: 0.75rem;
+}
+
+.positive {
+  color: var(--positive);
+  font-weight: 700;
+}
+
+.negative {
+  color: var(--negative);
+  font-weight: 700;
+}
+
+.danger-text {
+  color: var(--danger);
+}
+
 .doc-page code {
   font-family: Consolas, Monaco, monospace;
 }

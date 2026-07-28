@@ -180,7 +180,7 @@ function createTradingService({ store }) {
       return order;
     },
 
-    async runStrategy({ user, settings, strategy, execute, confirmLive }) {
+    async runStrategy({ user, settings, strategy, execute, confirmLive, scanCandidates = [] }) {
       const lastRunAt = strategy.lastRunAt ? new Date(strategy.lastRunAt).getTime() : 0;
       const elapsedSeconds = (Date.now() - lastRunAt) / 1000;
       if (elapsedSeconds < strategy.cooldownSeconds) {
@@ -192,13 +192,16 @@ function createTradingService({ store }) {
       const portfolio = store.getPortfolio(user.id).filter((position) => {
         return position.market === settings.market || (!position.market && settings.watchlist.includes(position.symbol));
       });
-      const quotes = await getQuoteBatch(settings.watchlist, settings.market);
+      const candidateSymbols = scanCandidates.map((c) => c.symbol);
+      const symbolsToFetch = [...new Set([...settings.watchlist, ...candidateSymbols])];
+      const quotes = await getQuoteBatch(symbolsToFetch, settings.market);
       const strategyDefinition = getStrategyById(settings.strategyId);
       const plan = strategyDefinition.evaluate({
         settings,
         portfolio,
         quotes,
-        controls: strategy
+        controls: strategy,
+        scanCandidates
       });
       const executed = [];
 

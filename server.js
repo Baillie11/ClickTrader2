@@ -9,6 +9,7 @@ const helmet = require("helmet");
 const compression = require("compression");
 const rateLimit = require("express-rate-limit");
 const bcrypt = require("bcryptjs");
+const cron = require("node-cron");
 
 const { createStore } = require("./src/dataStore");
 const { FileSessionStore } = require("./src/fileSessionStore");
@@ -16,10 +17,48 @@ const { getMarkets, getMarket, getStocksForMarket, getMarketStatus } = require("
 const { getQuote, getQuoteBatch } = require("./src/marketData");
 const { createTradingService } = require("./src/trading/tradingService");
 const { getStrategies, getStrategyById } = require("./src/strategyRegistry");
+const { scanDayTradeCandidates } = require("./src/scanner");
 
 const app = express();
 const store = createStore(path.join(__dirname, "data", "store.json"));
 const tradingService = createTradingService({ store });
+
+// ---------------------------------------------------------------------------
+// Auto-scan state: last scan results per market, shared across all users
+// ---------------------------------------------------------------------------
+const autoScanCache = {};
+const AUTO_SCAN_INTERVAL = Number(process.env.AUTO_SCAN_INTERVAL_MINUTES || 15);
+
+async function runAutoScan(market, budget) {
+  try {
+    const result = await scanDayTradeCandidates(market, { budget });
+    autoScanCache[market] = result;
+    console.log(`[AutoScan] ${market.toUpperCase()} — ${result.candidates.length} candidates found at ${new Date().toLocaleTimeString()}`);
+  } catch (error) {
+    console.error(`[AutoScan] ${market.toUpperCase()} error:`, error.message);
+  }
+}
+
+// Schedule auto-scans during market hours for enabled markets
+// US markets: Mon-Fri 09:30-16:00 ET (runs every N minutes during that window)
+// The cron itself runs every N minutes; actual market-hours guard is inside
+function scheduleAutoScans() {
+  const intervalMinutes = AUTO_SCAN_INTERVAL;
+  const cronExpr = `*/${intervalMinutes} * * * 1-5`; // every N min, weekdays
+  cron.schedule(cronExpr, () => {
+    // Run scan for each relevant market if it's open
+    const budget = Number(process.env.SIMULATED_STARTING_CASH || 100) / 4;
+    for (const market of ["nasdaq", "asx", "nyse"]) {
+      const status = getMarketStatus(market, "UTC");
+      if (status.isOpen) {
+        runAutoScan(market, budget);
+      }
+    }
+  });
+  console.log(`[AutoScan] Scheduled every ${intervalMinutes} minutes on weekdays during market hours.`);
+}
+
+scheduleAutoScans();
 
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
@@ -274,9 +313,16 @@ async function renderTradeDesk(req, res, next) {
     const trades = store.getTrades(user.id).slice(0, 12);
     const orders = store.getOrders(user.id).slice(0, 12);
     const account = await tradingService.getAccount({ user, settings });
+    const paperPhase = store.getPaperPhase(user.id);
+
+    // Merge watchlist with scanner candidates so all symbols get quotes
+    const cached = autoScanCache[settings.market];
+    const scanCandidates = cached ? cached.candidates : [];
+    const candidateSymbols = scanCandidates.map((c) => c.symbol);
 
     const symbols = [...new Set([
       ...settings.watchlist,
+      ...candidateSymbols,
       ...portfolio.map((item) => item.symbol)
     ])];
     const quotes = await getQuoteBatch(symbols, settings.market);
@@ -294,7 +340,8 @@ async function renderTradeDesk(req, res, next) {
           strategy: `/trade/${deskKey}/strategy`,
           trade: `/trade/${deskKey}/trade`,
           runStrategy: `/trade/${deskKey}/strategy/run`,
-          priceCheck: `/trade/${deskKey}/price-check`
+          priceCheck: `/trade/${deskKey}/price-check`,
+          scanner: `/trade/${deskKey}/scanner`
         }
       },
       stocks: getStocksForMarket(settings.market),
@@ -307,7 +354,11 @@ async function renderTradeDesk(req, res, next) {
       quotes,
       account,
       trades,
-      orders
+      orders,
+      paperPhase,
+      scanCandidates,
+      scanScannedAt: cached ? cached.scannedAt : null,
+      autoScanIntervalMinutes: AUTO_SCAN_INTERVAL
     });
   } catch (error) {
     next(error);
@@ -576,9 +627,26 @@ app.post("/strategy", requireUser, (req, res) => {
   res.redirect("/trade/aus");
 });
 
+// Scanner endpoint — returns JSON candidates for the desk's market
+app.get("/trade/:desk/scanner", requireUser, async (req, res) => {
+  try {
+    const user = store.getUserById(req.session.userId);
+    const settings = getDeskSettings(store.getSettings(user.id), getDeskKey(req.params.desk));
+    const budget = store.getStrategy(user.id).maxAllocationPerTrade || 25;
+    const result = await scanDayTradeCandidates(settings.market, { budget });
+    autoScanCache[settings.market] = result;
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.post("/trade/:desk/trade", requireUser, async (req, res) => {
   const user = store.getUserById(req.session.userId);
   const settings = getDeskSettings(store.getSettings(user.id), getDeskKey(req.params.desk));
+
+  // Start the paper phase timer on the first trade placed
+  store.recordPaperPhaseStart(user.id);
 
   try {
     const order = await tradingService.placeOrder({
@@ -609,13 +677,25 @@ app.post("/trade/:desk/strategy/run", requireUser, async (req, res) => {
   const settings = getDeskSettings(store.getSettings(user.id), getDeskKey(req.params.desk));
   const strategy = store.getStrategy(user.id);
 
+  // Run scanner first so strategy can use live candidates
+  let scanCandidates = [];
+  try {
+    const budget = strategy.maxAllocationPerTrade || 25;
+    const scanResult = await scanDayTradeCandidates(settings.market, { budget });
+    autoScanCache[settings.market] = scanResult;
+    scanCandidates = scanResult.candidates;
+  } catch (scanError) {
+    console.warn(`[Strategy] Scanner failed, proceeding without candidates: ${scanError.message}`);
+  }
+
   try {
     const result = await tradingService.runStrategy({
       user,
       settings,
       strategy,
       execute: req.body.execute === "on",
-      confirmLive: req.body.confirmLive === "on"
+      confirmLive: req.body.confirmLive === "on",
+      scanCandidates
     });
 
     store.saveScan(user.id, result);

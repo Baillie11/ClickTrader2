@@ -31,6 +31,33 @@
   <% }) %>
 </nav>
 
+<%# Paper phase progress banner %>
+<section class="paper-phase-banner <%= paperPhase.graduated ? 'graduated' : '' %>">
+  <% if (paperPhase.graduated) { %>
+    <div class="phase-info">
+      <strong>&#10003; Paper phase complete!</strong>
+      <span>30 days of paper trading done. You may consider enabling live trading when ready.</span>
+    </div>
+    <div class="phase-bar-wrap">
+      <div class="phase-bar" style="width:100%"></div>
+    </div>
+  <% } else if (paperPhase.startedAt) { %>
+    <div class="phase-info">
+      <strong>Paper trading phase &mdash; day <%= paperPhase.daysComplete %> of <%= paperPhase.daysRequired %></strong>
+      <span><%= paperPhase.daysRequired - paperPhase.daysComplete %> day(s) remaining before live trading is recommended.</span>
+    </div>
+    <div class="phase-bar-wrap">
+      <div class="phase-bar" style="width:<%= Math.round((paperPhase.daysComplete / paperPhase.daysRequired) * 100) %>%"></div>
+    </div>
+  <% } else { %>
+    <div class="phase-info">
+      <strong>Paper trading phase &mdash; not started yet</strong>
+      <span>Place your first paper trade to begin the 30-day paper phase. Live trading unlocks after 30 days.</span>
+    </div>
+    <div class="phase-bar-wrap"><div class="phase-bar" style="width:0%"></div></div>
+  <% } %>
+</section>
+
 <% if (settings.note) { %>
   <section class="notice">
     <%= settings.note %>
@@ -221,12 +248,106 @@
   <% settings.watchlist.forEach((symbol) => { %>
     <option value="<%= symbol %>"></option>
   <% }) %>
+  <% scanCandidates.forEach((c) => { %>
+    <option value="<%= c.symbol %>"><%= c.name %></option>
+  <% }) %>
 </datalist>
+
+<%# Day Trade Candidates scanner panel %>
+<section class="panel" id="scanner-panel">
+  <div class="panel-title">
+    <h2>Day Trade Candidates</h2>
+    <span id="scan-status">
+      <% if (scanScannedAt) { %>
+        Last scanned <%= new Date(scanScannedAt).toLocaleTimeString() %> &middot; auto-refreshes every <%= autoScanIntervalMinutes %> min
+      <% } else { %>
+        Not yet scanned &mdash; will auto-scan when market opens
+      <% } %>
+    </span>
+  </div>
+  <div class="scanner-actions">
+    <button class="secondary-button" id="refresh-scan-btn" onclick="refreshScan()">&#8635; Refresh Now</button>
+    <span id="scan-loading" style="display:none;margin-left:0.75rem;">Scanning&hellip;</span>
+  </div>
+  <div class="table-shell compact" id="candidates-table-wrap">
+    <table id="candidates-table">
+      <thead>
+        <tr>
+          <th>Symbol</th>
+          <th>Name</th>
+          <th>Price</th>
+          <th>Change</th>
+          <th>Volume</th>
+          <th>Shares/$<%= store ? '' : '' %><%= (strategy && strategy.maxAllocationPerTrade) ? strategy.maxAllocationPerTrade : 25 %></th>
+          <th>Why</th>
+        </tr>
+      </thead>
+      <tbody id="candidates-tbody">
+        <% if (!scanCandidates || !scanCandidates.length) { %>
+          <tr><td colspan="7">No candidates yet. Click &ldquo;Refresh Now&rdquo; or wait for the auto-scan during market hours.</td></tr>
+        <% } %>
+        <% (scanCandidates || []).forEach((c) => { %>
+          <tr class="<%= c.fromScreener ? 'screener-hit' : '' %>">
+            <td><strong><a href="#" onclick="fillSymbol('<%= c.symbol %>');return false;"><%= c.symbol %></a></strong></td>
+            <td><%= c.name %></td>
+            <td>$<%= c.price.toFixed(2) %></td>
+            <td class="<%= c.changePercent >= 0 ? 'positive' : 'negative' %>">
+              <%= c.changePercent >= 0 ? '+' : '' %><%= c.changePercent.toFixed(2) %>%
+            </td>
+            <td><%= (c.volume / 1000).toFixed(0) %>k</td>
+            <td><%= c.sharesPerSlot %></td>
+            <td><small><%= c.reason %></small></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<script>
+function fillSymbol(sym) {
+  const input = document.querySelector('input[name="symbol"]');
+  if (input) { input.value = sym; input.focus(); }
+}
+
+async function refreshScan() {
+  const btn = document.getElementById('refresh-scan-btn');
+  const loading = document.getElementById('scan-loading');
+  const status = document.getElementById('scan-status');
+  const tbody = document.getElementById('candidates-tbody');
+  btn.disabled = true;
+  loading.style.display = 'inline';
+  try {
+    const res = await fetch('<%= url(desk.paths.scanner) %>');
+    if (!res.ok) throw new Error('Scan failed');
+    const data = await res.json();
+    const alloc = <%= (strategy && strategy.maxAllocationPerTrade) ? strategy.maxAllocationPerTrade : 25 %>;
+    tbody.innerHTML = data.candidates.length === 0
+      ? '<tr><td colspan="7">No candidates matched the filter criteria.</td></tr>'
+      : data.candidates.map(c => `
+        <tr class="${c.fromScreener ? 'screener-hit' : ''}">
+          <td><strong><a href="#" onclick="fillSymbol('${c.symbol}');return false;">${c.symbol}</a></strong></td>
+          <td>${c.name}</td>
+          <td>$${c.price.toFixed(2)}</td>
+          <td class="${c.changePercent >= 0 ? 'positive' : 'negative'}">${c.changePercent >= 0 ? '+' : ''}${c.changePercent.toFixed(2)}%</td>
+          <td>${(c.volume/1000).toFixed(0)}k</td>
+          <td>${c.sharesPerSlot}</td>
+          <td><small>${c.reason}</small></td>
+        </tr>`).join('');
+    status.textContent = 'Last scanned ' + new Date(data.scannedAt).toLocaleTimeString() + ' \u00b7 ' + data.candidates.length + ' candidates found';
+  } catch (err) {
+    status.textContent = 'Scan error: ' + err.message;
+  } finally {
+    btn.disabled = false;
+    loading.style.display = 'none';
+  }
+}
+</script>
 
 <section class="panel">
   <div class="panel-title">
     <h2>Watchlist Quotes</h2>
-    <span>Yahoo Finance fallback data</span>
+    <span>Yahoo Finance live data</span>
   </div>
   <div class="quote-grid">
     <% settings.watchlist.forEach((symbol) => { const quote = quotes[symbol] || {}; %>
