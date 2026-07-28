@@ -18,6 +18,7 @@ const { getQuote, getQuoteBatch } = require("./src/marketData");
 const { createTradingService } = require("./src/trading/tradingService");
 const { getStrategies, getStrategyById } = require("./src/strategyRegistry");
 const { scanDayTradeCandidates } = require("./src/scanner");
+const { hasAlpacaCredentials } = require("./src/trading/alpacaEngine");
 
 const app = express();
 const store = createStore(path.join(__dirname, "data", "store.json"));
@@ -236,6 +237,61 @@ function renderDocPage(res, fileName, pageTitle) {
     pageTitle,
     contentHtml: markdownToHtml(markdown)
   });
+}
+
+// ---------------------------------------------------------------------------
+// Broker catalog — defines which brokers support which markets
+// ---------------------------------------------------------------------------
+const BROKER_CATALOG = [
+  {
+    id: "simulator",
+    name: "Local Simulator",
+    markets: ["asx", "nasdaq", "nyse", "xetra", "sse", "lse"],
+    note: "Always available · Paper trades only · No credentials needed"
+  },
+  {
+    id: "alpaca",
+    name: "Alpaca",
+    markets: ["nasdaq", "nyse"],
+    note: "US markets only (NASDAQ & NYSE) · Add API key & secret below · Paper and live"
+  },
+  {
+    id: "ibkr",
+    name: "Interactive Brokers (IBKR)",
+    markets: ["asx", "nasdaq", "nyse", "xetra", "lse"],
+    note: "Requires IBKR Client Portal Gateway running locally · Add account ID & endpoint below"
+  }
+];
+
+// Fuzzy-match a stored brokerName string back to a catalog id
+function resolveBrokerId(brokerName) {
+  const name = String(brokerName || "").toLowerCase().trim();
+  if (!name || name === "simulator" || name === "local simulator") return "simulator";
+  if (name.includes("alpaca")) return "alpaca";
+  if (name.includes("ibkr") || name.includes("interactive")) return "ibkr";
+  return "simulator";
+}
+
+// Build per-market broker connection status for the settings view
+function getBrokerStatus(settings) {
+  const alpacaPaper = hasAlpacaCredentials("paper");
+  const alpacaLive = hasAlpacaCredentials("live");
+  const result = {};
+  for (const market of ["asx", "nasdaq", "nyse", "xetra", "sse", "lse"]) {
+    const broker = (settings.brokerAccounts || {})[market] || {};
+    const ibkrConnected = Boolean(
+      (broker.brokerName || "").toLowerCase().includes("ibkr") ||
+      (broker.brokerName || "").toLowerCase().includes("interactive")
+    ) && Boolean(broker.accountLabel && broker.endpoint);
+    result[market] = {
+      simulator: true,
+      alpaca: alpacaPaper || alpacaLive,
+      ibkr: ibkrConnected,
+      alpacaPaper,
+      alpacaLive
+    };
+  }
+  return result;
 }
 
 const DESKS = [
@@ -513,12 +569,22 @@ app.post("/trade/:desk/settings", requireUser, (req, res) => {
 app.get("/settings", requireUser, (req, res) => {
   const user = store.getUserById(req.session.userId);
   const settings = store.getSettings(user.id);
+  const brokerStatus = getBrokerStatus(settings);
+  // Pre-resolve each market's stored brokerName to a catalog id
+  const resolvedBrokers = {};
+  for (const market of ["asx", "nasdaq", "nyse", "xetra", "sse", "lse"]) {
+    const brokerName = (settings.brokerAccounts || {})[market]?.brokerName || "";
+    resolvedBrokers[market] = resolveBrokerId(brokerName);
+  }
   res.render("settings", {
     pageTitle: "Settings",
     settings,
     markets: getMarkets().filter((market) => ["asx", "nasdaq", "xetra", "sse", "lse"].includes(market.code)),
     desks: DESKS,
-    strategies: getStrategies()
+    strategies: getStrategies(),
+    brokerCatalog: BROKER_CATALOG,
+    brokerStatus,
+    resolvedBrokers
   });
 });
 

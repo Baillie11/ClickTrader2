@@ -115,11 +115,31 @@
             <input name="watchlist_<%= market.code %>" value="<%= (settings.marketWatchlists[market.code] || []).join(", ") %>">
           </label>
 
-          <div class="broker-grid">
-            <label>
+          <div class="broker-grid" data-broker-grid="<%= market.code %>">
+            <%
+              const availableBrokers = brokerCatalog.filter(function(b) { return b.markets.includes(market.code); });
+              const selectedBrokerId = resolvedBrokers[market.code] || 'simulator';
+              const mktStatus = brokerStatus[market.code] || {};
+              const selectedBroker = availableBrokers.find(function(b) { return b.id === selectedBrokerId; }) || availableBrokers[0];
+            %>
+            <label class="wide">
               Broker
-              <input name="brokerName_<%= market.code %>" value="<%= broker.brokerName || "" %>" placeholder="e.g. Alpaca, IBKR, CMC">
+              <select name="brokerName_<%= market.code %>" onchange="updateBrokerFields('<%= market.code %>', this.value)">
+                <% availableBrokers.forEach(function(b) {
+                  const isSelected = b.id === selectedBrokerId;
+                  const connected = b.id === 'simulator' ? true
+                    : b.id === 'alpaca' ? (mktStatus.alpacaPaper || mktStatus.alpacaLive)
+                    : b.id === 'ibkr' ? mktStatus.ibkr
+                    : false;
+                %>
+                  <option value="<%= b.id %>" <%= isSelected ? 'selected' : '' %> data-note="<%= b.note %>">
+                    <%= b.name %> &mdash; <%= connected ? '\u2713 Connected' : '\u25cb Not configured' %>
+                  </option>
+                <% }); %>
+              </select>
+              <small class="broker-note" id="broker-note-<%= market.code %>"><%= selectedBroker ? selectedBroker.note : '' %></small>
             </label>
+
             <label>
               Account ID / label
               <input name="accountLabel_<%= market.code %>" value="<%= broker.accountLabel || "" %>" placeholder="<%= market.code === "asx" ? "IBKR account ID, e.g. DU123456" : "Paper, Live, Main" %>">
@@ -131,30 +151,32 @@
                 <option value="live" <%= broker.mode === "live" ? "selected" : "" %>>Live</option>
               </select>
             </label>
-            <label>
-              API key
+
+            <label class="broker-field-alpaca broker-field-ibkr" id="broker-apikey-<%= market.code %>">
+              API key <small>(Alpaca only)</small>
               <input name="apiKey_<%= market.code %>" value="<%= broker.apiKey || "" %>" autocomplete="off">
             </label>
-            <label>
-              API secret
+            <label class="broker-field-alpaca broker-field-ibkr" id="broker-apisecret-<%= market.code %>">
+              API secret <small>(Alpaca only)</small>
               <span class="password-field">
                 <input type="password" name="apiSecret_<%= market.code %>" value="<%= broker.apiSecret || "" %>" autocomplete="off" data-password-input>
                 <button type="button" class="password-toggle" data-password-toggle>Show</button>
               </span>
             </label>
-            <label>
-              Endpoint
-              <input name="endpoint_<%= market.code %>" value="<%= broker.endpoint || "" %>" placeholder="<%= market.code === "asx" ? "https://localhost:5000/v1/api" : "Optional broker API URL" %>">
+            <label class="broker-field-ibkr" id="broker-endpoint-<%= market.code %>">
+              Endpoint <small>(IBKR only)</small>
+              <input name="endpoint_<%= market.code %>" value="<%= broker.endpoint || "" %>" placeholder="<%= market.code === "asx" ? "https://localhost:5000/v1/api" : "https://localhost:5000/v1/api" %>">
             </label>
-            <label class="wide">
-              IBKR conid map
-              <input name="conidMap_<%= market.code %>" value="<%= broker.conidMap || "" %>" placeholder="Optional: CBA:123456, BHP:234567">
+            <label class="wide broker-field-ibkr" id="broker-conid-<%= market.code %>">
+              IBKR conid map <small>(optional)</small>
+              <input name="conidMap_<%= market.code %>" value="<%= broker.conidMap || "" %>" placeholder="e.g. CBA:123456, BHP:234567">
             </label>
             <label class="wide">
               Broker notes
               <input name="brokerNotes_<%= market.code %>" value="<%= broker.notes || "" %>">
             </label>
           </div>
+          <script>updateBrokerFields('<%= market.code %>', '<%= selectedBrokerId %>');</script>
         </article>
       <% }) %>
     </div>
@@ -190,5 +212,31 @@
 
   <button class="primary-button settings-save" type="submit">Save Settings</button>
 </form>
+
+<script>
+function updateBrokerFields(market, brokerId) {
+  // Update the hint note
+  var select = document.querySelector('select[name="brokerName_' + market + '"]');
+  var note = document.getElementById('broker-note-' + market);
+  if (select && note) {
+    var selectedOption = select.options[select.selectedIndex];
+    note.textContent = selectedOption ? (selectedOption.dataset.note || '') : '';
+  }
+
+  // Fields only relevant to Alpaca
+  var alpacaFields = ['broker-apikey-' + market, 'broker-apisecret-' + market];
+  // Fields only relevant to IBKR
+  var ibkrFields = ['broker-endpoint-' + market, 'broker-conid-' + market];
+
+  alpacaFields.forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.style.display = (brokerId === 'alpaca') ? '' : 'none';
+  });
+  ibkrFields.forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.style.display = (brokerId === 'ibkr') ? '' : 'none';
+  });
+}
+</script>
 
 <%- include("partials/footer") %>

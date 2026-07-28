@@ -644,6 +644,15 @@ tr.screener-hit td:first-child::after {
   color: var(--danger);
 }
 
+/* Broker dropdown note hint */
+.broker-note {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-style: italic;
+}
+
 .doc-page code {
   font-family: Consolas, Monaco, monospace;
 }
