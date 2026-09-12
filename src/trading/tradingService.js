@@ -16,7 +16,7 @@ const { getStrategyById } = require("../strategyRegistry");
 
 function assertTradingAllowed({ settings, confirmLive }) {
   const marketStatus = getMarketStatus(settings.market, settings.timezone);
-  if (settings.requireMarketOpen && !marketStatus.isOpen) {
+  if (settings.tradeMode === "live" && settings.requireMarketOpen && !marketStatus.isOpen) {
     throw new Error(`${marketStatus.name} is closed. Disable the market-hours guard to test outside live hours.`);
   }
 
@@ -98,6 +98,9 @@ function createTradingService({ store }) {
       }
 
       assertTradingAllowed({ settings, confirmLive });
+      if (settings.tradeMode === "paper") {
+        store.recordPaperPhaseStart(user.id);
+      }
 
       const beforePosition = store.getPortfolio(user.id).find((position) => {
         return position.symbol === cleanSymbol && (position.market || null) === (settings.market || null);

@@ -135,8 +135,8 @@
       </div>
     </div>
     <label class="checkbox-line">
-      <input type="checkbox" name="execute">
-      Execute orders from this run
+      <input type="checkbox" name="execute" <%= settings.tradeMode === "paper" ? "checked" : "" %>>
+      Execute simulated paper orders from this run
     </label>
     <label class="checkbox-line">
       <input type="checkbox" name="confirmLive">

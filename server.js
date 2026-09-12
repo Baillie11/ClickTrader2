@@ -101,6 +101,29 @@ app.use(helmet({ contentSecurityPolicy: false }));
 app.use(compression());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+
+app.get("/manifest.webmanifest", (req, res) => {
+  res.type("application/manifest+json");
+  res.json({
+    name: "Click Trader",
+    short_name: "Click Trader",
+    description: "Day trading cockpit for simulated, paper, and live trading workflows.",
+    start_url: withBasePath("/"),
+    scope: withBasePath("/"),
+    display: "standalone",
+    background_color: "#f4f7f4",
+    theme_color: "#12877b",
+    icons: [
+      {
+        src: withBasePath("/assets/CT2Logo.png"),
+        sizes: "1024x1024",
+        type: "image/png",
+        purpose: "any maskable"
+      }
+    ]
+  });
+});
+
 app.use(express.static(path.join(__dirname, "public")));
 app.use(rateLimit({ windowMs: 60 * 1000, limit: 240 }));
 app.use(
@@ -329,7 +352,7 @@ function getDeskSettings(baseSettings, deskKey) {
     || (market === "asx" ? baseSettings.ausWatchlist : null)
     || (market === "nasdaq" ? baseSettings.usWatchlist || baseSettings.watchlist : null)
     || getStocksForMarket(market).map((stock) => stock.symbol);
-  const strategyId = baseSettings.activeStrategies?.[market] || "low-margin-scalp";
+  const strategyId = baseSettings.activeStrategies?.[market] || "small-account-day-trader";
 
   return {
     ...baseSettings,
@@ -548,7 +571,7 @@ app.post("/trade/:desk/settings", requireUser, (req, res) => {
   };
   update.activeStrategies = {
     ...(currentSettings.activeStrategies || {}),
-    [deskSettings.market]: req.body.activeStrategy || currentSettings.activeStrategies?.[deskSettings.market] || "low-margin-scalp"
+    [deskSettings.market]: req.body.activeStrategy || currentSettings.activeStrategies?.[deskSettings.market] || "small-account-day-trader"
   };
 
   if (deskKey === "aus") {
@@ -623,7 +646,7 @@ app.post("/settings", requireUser, (req, res) => {
 
   for (const market of markets) {
     marketWatchlists[market.code] = symbolsFromText(req.body[`watchlist_${market.code}`]);
-    activeStrategies[market.code] = req.body[`strategy_${market.code}`] || "low-margin-scalp";
+    activeStrategies[market.code] = req.body[`strategy_${market.code}`] || "small-account-day-trader";
     brokerAccounts[market.code] = {
       brokerName: String(req.body[`brokerName_${market.code}`] || "").trim(),
       accountLabel: String(req.body[`accountLabel_${market.code}`] || "").trim(),
@@ -672,7 +695,7 @@ app.post("/trade/:desk/strategy", requireUser, (req, res) => {
   store.updateSettings(user.id, {
     activeStrategies: {
       ...(currentSettings.activeStrategies || {}),
-      [settings.market]: req.body.activeStrategy || "low-margin-scalp"
+      [settings.market]: req.body.activeStrategy || "small-account-day-trader"
     }
   });
   store.updateStrategy(user.id, {
@@ -759,7 +782,7 @@ app.post("/trade/:desk/strategy/run", requireUser, async (req, res) => {
       user,
       settings,
       strategy,
-      execute: req.body.execute === "on",
+      execute: settings.tradeMode === "paper" || req.body.execute === "on",
       confirmLive: req.body.confirmLive === "on",
       scanCandidates
     });
