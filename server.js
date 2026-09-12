@@ -116,19 +116,31 @@ app.get("/manifest.webmanifest", (req, res) => {
     theme_color: "#12877b",
     icons: [
       {
-        src: withBasePath("/assets/click-trader-icon-192.png?v=2"),
+        src: withBasePath("/assets/click-trader-icon-192-v3.png"),
         sizes: "192x192",
         type: "image/png",
         purpose: "any maskable"
       },
       {
-        src: withBasePath("/assets/click-trader-icon-512.png?v=2"),
+        src: withBasePath("/assets/click-trader-icon-512-v3.png"),
         sizes: "512x512",
         type: "image/png",
         purpose: "any maskable"
       }
     ]
   });
+});
+
+app.get("/favicon.ico", (req, res) => {
+  res.set("Cache-Control", "no-store, max-age=0");
+  res.type("image/png");
+  res.sendFile(path.join(__dirname, "public", "assets", "click-trader-icon-32-v3.png"));
+});
+
+app.get("/apple-touch-icon.png", (req, res) => {
+  res.set("Cache-Control", "no-store, max-age=0");
+  res.type("image/png");
+  res.sendFile(path.join(__dirname, "public", "assets", "click-trader-icon-192-v3.png"));
 });
 
 app.use(express.static(path.join(__dirname, "public")));
