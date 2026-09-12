@@ -20,6 +20,7 @@ Click Trader is a Node.js rebuild of the original Flask ClickTrader app. It keep
 - `live`: uses Alpaca live credentials and requires explicit confirmation in the UI.
 
 Live trading is disabled unless `ALPACA_LIVE_KEY` and `ALPACA_LIVE_SECRET` are configured.
+Automatic strategy execution is enabled for simulated/paper trading by default with `AUTO_PAPER_TRADING=true`. It never auto-places live orders.
 
 ## Day Trading Focus
 
@@ -31,7 +32,8 @@ The dashboard includes:
 - max open positions
 - cooldown seconds between strategy runs
 - spread/volume aware scan output
-- strategy dry-run preview before placing orders
+- automatic simulated/paper strategy execution while the app is awake
+- strategy previews and manual order controls for testing
 
 This is not financial advice. Test with paper mode first and review Alpaca's rules for pattern day trading, margin, shorting, and market data entitlements before using live mode.
 
@@ -54,4 +56,4 @@ Open `http://localhost:3000`.
 5. Add environment variables from `.env.example`.
 6. Start or restart the Node.js app.
 
-Because shared hosting may sleep or restart Node processes, strategy execution is request-driven by default. Use the dashboard's scan/run buttons rather than relying on always-on background automation.
+Because shared hosting may sleep or restart Node processes, automatic paper trading runs only while the Node app is awake. The dashboard's scan/run buttons remain available whenever you want to test a strategy immediately.

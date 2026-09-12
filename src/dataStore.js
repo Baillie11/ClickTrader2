@@ -35,6 +35,7 @@ const DEFAULT_SETTINGS = {
     compactMode: false,
     notes: ""
   },
+  autoPaperTrading: process.env.AUTO_PAPER_TRADING !== "false",
   requireMarketOpen: true,
   allowLiveTrading: false,
   paperPhaseStartedAt: null
@@ -109,6 +110,9 @@ function createStore(filePath) {
     if (data.settings[userId].paperPhaseStartedAt === undefined) {
       data.settings[userId].paperPhaseStartedAt = null;
     }
+    if (data.settings[userId].autoPaperTrading === undefined) {
+      data.settings[userId].autoPaperTrading = DEFAULT_SETTINGS.autoPaperTrading;
+    }
     data.settings[userId].usWatchlist = data.settings[userId].usWatchlist || data.settings[userId].watchlist || DEFAULT_SETTINGS.usWatchlist;
     data.settings[userId].ausWatchlist = data.settings[userId].ausWatchlist || DEFAULT_SETTINGS.ausWatchlist;
     data.settings[userId].usMarket = data.settings[userId].usMarket || (data.settings[userId].market === "asx" ? "nasdaq" : data.settings[userId].market) || "nasdaq";
@@ -144,6 +148,13 @@ function createStore(filePath) {
   }
 
   return {
+    listUsers() {
+      return mutate((data) => {
+        data.users.forEach((user) => ensureUserBuckets(data, user.id));
+        return data.users;
+      });
+    },
+
     getUserById(userId) {
       const data = read();
       const user = data.users.find((item) => item.id === userId);

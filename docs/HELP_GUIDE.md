@@ -7,7 +7,7 @@ This guide explains the app in plain English.
 Click Trader is a tool for practising and managing share trades. It helps users:
 
 - watch markets
-- paper trade with simulated money
+- paper trade with simulated money automatically or manually
 - test trading strategies
 - record trades and results
 - prepare for broker-connected trading later
@@ -50,6 +50,8 @@ Paper trading is useful because it lets you:
 - make mistakes safely
 - practise before connecting a broker
 
+By default, Click Trader automatically scans enabled markets and places simulated paper orders when the active strategy finds a qualifying trade. If the rules do not find a good candidate, no order is placed.
+
 ## What Is a Broker?
 
 A broker is the company that places real trades on the market for you.
@@ -84,6 +86,8 @@ Strategies do not guarantee profit. They are structured decision rules.
 8. Check the Open Positions table.
 9. To close the trade, place a `Sell` order for the same symbol and quantity.
 10. Open `Settings > Logs` to review the result.
+
+You can also let the app do this automatically. Keep `Automatically run simulator and paper trades` switched on in Settings, then leave the app running. Automatic trading only uses simulated/paper mode.
 
 ## What Is Profit/Loss?
 
@@ -135,7 +139,7 @@ For a new user:
 - Start with AUS Trade or U.S. Trade.
 - Use a small watchlist.
 - Keep max allocation low.
-- Run strategy scans before executing.
+- Leave automatic paper trading enabled, or run strategy scans manually when you want an immediate test.
 - Review logs after every trade.
 
 ## What The App Cannot Do

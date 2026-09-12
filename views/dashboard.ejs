@@ -51,8 +51,14 @@
     </div>
   <% } else { %>
     <div class="phase-info">
-      <strong>Paper trading phase &mdash; not started yet</strong>
-      <span>Place your first paper trade to begin the 30-day paper phase. Live trading unlocks after 30 days.</span>
+      <strong>Paper trading phase &mdash; <%= settings.autoPaperTrading !== false ? "automation armed" : "not started yet" %></strong>
+      <span>
+        <% if (settings.autoPaperTrading !== false) { %>
+          The app is scanning for qualifying paper trades automatically. The 30-day paper phase begins as soon as the first simulated order is placed.
+        <% } else { %>
+          Automatic paper trading is off. Run the strategy manually or turn automation on in Settings to begin the 30-day paper phase.
+        <% } %>
+      </span>
     </div>
     <div class="phase-bar-wrap"><div class="phase-bar" style="width:0%"></div></div>
   <% } %>

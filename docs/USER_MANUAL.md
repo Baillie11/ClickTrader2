@@ -42,6 +42,7 @@ Where each user controls:
 - active strategy per market
 - risk preferences
 - default landing desk
+- automatic paper trading
 - logs
 
 ### Logout
@@ -68,9 +69,12 @@ In Click Trader, paper trades:
 
 - use your watchlist
 - fetch market prices from Yahoo Finance
+- can run automatically when automatic paper trading is enabled
 - update the simulated portfolio
 - create trade logs
 - calculate realised profit/loss when a simulated sell closes a position
+
+Automatic paper trading is enabled by default. The app scans the enabled markets on the scheduler, applies the active strategy for each market, and places simulated orders only when the rules find a qualifying trade. If no trade meets the rules, the app waits for the next scan.
 
 ## Live Trading
 
@@ -111,7 +115,7 @@ Fields:
 
 ### Strategy Runner
 
-Runs the selected strategy for the active market.
+Runs the selected strategy for the active market immediately. This is useful for testing the logic without waiting for the automatic paper trading cycle.
 
 Options:
 
@@ -161,6 +165,7 @@ Controls global user preferences:
 - Daily loss limit
 - Max trades per day
 - Global trade mode
+- Automatic paper trading switch
 - Market-hours guard
 - Live trading enable switch
 - Compact dashboard mode
@@ -221,10 +226,10 @@ data/logs/
 2. Use AUS Trade or U.S. Trade.
 3. Keep market-hours guard enabled.
 4. Use a small max allocation.
-5. Run `Scan Strategy` without executing.
-6. Read the suggested actions.
-7. Place one small manual paper buy.
-8. Place one small manual paper sell.
+5. Leave automatic paper trading enabled if you want the app to scan and trade for you.
+6. Use `Scan Strategy` when you want to test the strategy immediately.
+7. Review any simulated buys and sells that appear.
+8. Place manual paper trades only when you want to practise the order ticket.
 9. Review `Settings > Logs`.
 10. Only consider live trading after consistent paper testing.
 

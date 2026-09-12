@@ -29,6 +29,8 @@ const tradingService = createTradingService({ store });
 // ---------------------------------------------------------------------------
 const autoScanCache = {};
 const AUTO_SCAN_INTERVAL = Number(process.env.AUTO_SCAN_INTERVAL_MINUTES || 15);
+const AUTO_PAPER_TRADING_ENABLED = process.env.AUTO_PAPER_TRADING !== "false";
+let autoPaperCycleRunning = false;
 
 async function runAutoScan(market, budget) {
   try {
@@ -37,6 +39,53 @@ async function runAutoScan(market, budget) {
     console.log(`[AutoScan] ${market.toUpperCase()} — ${result.candidates.length} candidates found at ${new Date().toLocaleTimeString()}`);
   } catch (error) {
     console.error(`[AutoScan] ${market.toUpperCase()} error:`, error.message);
+  }
+}
+
+async function runAutomaticPaperTrades() {
+  if (!AUTO_PAPER_TRADING_ENABLED) return;
+  if (autoPaperCycleRunning) return;
+  autoPaperCycleRunning = true;
+
+  try {
+    const users = store.listUsers();
+    for (const user of users) {
+      const baseSettings = store.getSettings(user.id);
+      if (baseSettings.tradeMode !== "paper" || baseSettings.autoPaperTrading === false) continue;
+
+      const strategy = store.getStrategy(user.id);
+      const budget = strategy.maxAllocationPerTrade || 25;
+      const enabledDesks = getEnabledDesks(baseSettings);
+
+      for (const desk of enabledDesks) {
+        const settings = {
+          ...getDeskSettings(baseSettings, desk.key),
+          tradeMode: "paper",
+          allowLiveTrading: false
+        };
+
+        try {
+          const scanResult = await scanDayTradeCandidates(settings.market, { budget });
+          autoScanCache[settings.market] = scanResult;
+
+          const result = await tradingService.runStrategy({
+            user,
+            settings,
+            strategy: { ...strategy, lastRunAt: null },
+            execute: true,
+            confirmLive: false,
+            scanCandidates: scanResult.candidates
+          });
+
+          store.saveScan(user.id, result);
+          console.log(`[AutoPaper] ${user.email} ${settings.market.toUpperCase()} — ${result.executed.length} paper order(s), ${result.plan.length} signal(s).`);
+        } catch (error) {
+          console.error(`[AutoPaper] ${user.email} ${settings.market.toUpperCase()} error:`, error.message);
+        }
+      }
+    }
+  } finally {
+    autoPaperCycleRunning = false;
   }
 }
 
@@ -57,6 +106,12 @@ function scheduleAutoScans() {
     }
   });
   console.log(`[AutoScan] Scheduled every ${intervalMinutes} minutes on weekdays during market hours.`);
+  console.log(`[AutoPaper] ${AUTO_PAPER_TRADING_ENABLED ? "Enabled" : "Disabled"}; paper users can auto-run every ${intervalMinutes} minutes while the app is awake.`);
+
+  if (AUTO_PAPER_TRADING_ENABLED) {
+    cron.schedule(`*/${intervalMinutes} * * * *`, () => runAutomaticPaperTrades());
+    setTimeout(() => runAutomaticPaperTrades(), 8000);
+  }
 }
 
 scheduleAutoScans();
@@ -689,6 +744,7 @@ app.post("/settings", requireUser, (req, res) => {
     watchlist: marketWatchlists.nasdaq,
     tradeMode: req.body.globalTradeMode === "live" ? "live" : "paper",
     timezone: req.body.timezone || "Australia/Brisbane",
+    autoPaperTrading: req.body.autoPaperTrading === "on",
     requireMarketOpen: req.body.requireMarketOpen === "on",
     allowLiveTrading: req.body.allowLiveTrading === "on",
     personalization: {

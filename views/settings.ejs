@@ -67,6 +67,10 @@
         </select>
       </label>
       <label class="checkbox-line">
+        <input type="checkbox" name="autoPaperTrading" <%= settings.autoPaperTrading !== false ? "checked" : "" %>>
+        Automatically run simulator and paper trades
+      </label>
+      <label class="checkbox-line">
         <input type="checkbox" name="requireMarketOpen" <%= settings.requireMarketOpen ? "checked" : "" %>>
         Require market open
       </label>

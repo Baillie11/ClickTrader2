@@ -4,6 +4,8 @@ Strategies are modular rule sets. Each one reviews the current watchlist, curren
 
 The active strategy can be selected per market in `Settings`.
 
+When automatic paper trading is enabled, Click Trader runs the active strategy for each enabled market on the background scanner interval and places simulated paper orders for qualifying signals. Live orders are not placed automatically.
+
 ## Shared Controls
 
 Strategies use the following controls from the dashboard:
