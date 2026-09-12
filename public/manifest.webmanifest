@@ -1,0 +1,24 @@
+{
+  "name": "Click Trader",
+  "short_name": "Click Trader",
+  "description": "Day trading cockpit for simulated, paper, and live trading workflows.",
+  "start_url": "/clicktrader/",
+  "scope": "/clicktrader/",
+  "display": "standalone",
+  "background_color": "#f4f7f4",
+  "theme_color": "#12877b",
+  "icons": [
+    {
+      "src": "/clicktrader/assets/click-trader-icon-192-v3.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/clicktrader/assets/click-trader-icon-512-v3.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
