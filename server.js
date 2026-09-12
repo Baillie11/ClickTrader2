@@ -104,6 +104,7 @@ app.use(express.json());
 
 app.get("/manifest.webmanifest", (req, res) => {
   res.type("application/manifest+json");
+  res.set("Cache-Control", "no-store, max-age=0");
   res.json({
     name: "Click Trader",
     short_name: "Click Trader",
@@ -115,8 +116,14 @@ app.get("/manifest.webmanifest", (req, res) => {
     theme_color: "#12877b",
     icons: [
       {
-        src: withBasePath("/assets/CT2Logo.png"),
-        sizes: "1024x1024",
+        src: withBasePath("/assets/click-trader-icon-192.png?v=2"),
+        sizes: "192x192",
+        type: "image/png",
+        purpose: "any maskable"
+      },
+      {
+        src: withBasePath("/assets/click-trader-icon-512.png?v=2"),
+        sizes: "512x512",
         type: "image/png",
         purpose: "any maskable"
       }
