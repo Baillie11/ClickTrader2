@@ -167,10 +167,12 @@ function createStore(filePath) {
         positions: account.positions || []
       };
     }
-    if (untouchedAccount && Number(data.strategies[userId].maxAllocationPerTrade || 0) <= 25) {
+    const targetAllocation = Math.max(25, Math.floor(startingCash / 4));
+    const currentAllocation = Number(data.strategies[userId].maxAllocationPerTrade || 0);
+    if (untouchedAccount && (currentAllocation <= 25 || currentAllocation > targetAllocation)) {
       data.strategies[userId] = {
         ...data.strategies[userId],
-        maxAllocationPerTrade: 125,
+        maxAllocationPerTrade: targetAllocation,
         minVolume: Math.min(Number(data.strategies[userId].minVolume || 50000), 50000),
         updatedAt: nowIso()
       };
