@@ -701,6 +701,40 @@ tr.screener-hit td:first-child::after {
   font-size: 0.82rem;
 }
 
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  min-width: 52px;
+  justify-content: center;
+  margin-right: 6px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  color: var(--ink);
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+}
+
+.status-buy,
+.status-sell {
+  color: #fff;
+  background: var(--positive);
+  border-color: var(--positive);
+}
+
+.status-sell {
+  background: var(--negative);
+  border-color: var(--negative);
+}
+
+.status-hold {
+  color: #173b68;
+  background: #e8f1fb;
+  border-color: #c9dff4;
+}
+
 @media (max-width: 900px) {
   .dashboard-head,
   .section-heading {

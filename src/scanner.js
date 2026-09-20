@@ -119,7 +119,7 @@ function candidateReason(quote, budget) {
 async function scanDayTradeCandidates(market, options = {}) {
   const {
     minPrice = 0.50,
-    maxPrice = 50,
+    maxPrice = Math.max(50, Number(options.budget || 25)),
     minVolume = 50000,
     topN = 12,
     budget = 25

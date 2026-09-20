@@ -40,6 +40,89 @@ function normalizeQuantity(quantity) {
   return parsed;
 }
 
+function formatBps(value) {
+  const numeric = Number(value || 0);
+  return `${numeric >= 0 ? "+" : ""}${numeric.toFixed(0)} bps`;
+}
+
+function buildStrategyAssessment({ settings, portfolio, quotes, controls, scanCandidates, plan }) {
+  const plannedBySymbol = new Map(plan.map((item) => [item.symbol, item]));
+  const candidateSymbols = scanCandidates.length
+    ? scanCandidates.map((candidate) => candidate.symbol)
+    : settings.watchlist;
+  const symbols = [...new Set([
+    ...portfolio.map((position) => position.symbol),
+    ...candidateSymbols
+  ])];
+  const openSlots = Math.max(0, controls.maxOpenPositions - portfolio.length);
+
+  return symbols.map((symbol) => {
+    const quote = quotes[symbol] || {};
+    const planned = plannedBySymbol.get(symbol);
+    const position = portfolio.find((item) => item.symbol === symbol);
+    const candidate = scanCandidates.find((item) => item.symbol === symbol);
+    const price = Number(quote.price || candidate?.price || 0);
+    const changePercent = Number(quote.changePercent ?? candidate?.changePercent ?? 0);
+    const volume = Number(quote.volume ?? candidate?.volume ?? 0);
+    const spreadBps = Number(quote.spreadBps || 0);
+
+    if (planned) {
+      return {
+        symbol,
+        market: settings.market,
+        action: planned.side === "sell" ? "SELL" : "BUY",
+        decision: planned.side === "sell" ? "Sell planned" : "Buy planned",
+        reason: planned.reason,
+        price,
+        changePercent,
+        volume,
+        quantity: planned.quantity,
+        score: planned.score || 0
+      };
+    }
+
+    if (position) {
+      const moveBps = position.avgEntryPrice && price
+        ? ((price - position.avgEntryPrice) / position.avgEntryPrice) * 10000
+        : 0;
+      return {
+        symbol,
+        market: settings.market,
+        action: "HOLD",
+        decision: "No sell",
+        reason: `Holding. Current move ${formatBps(moveBps)} has not reached target ${controls.targetProfitBps} bps or stop -${controls.stopLossBps} bps.`,
+        price,
+        changePercent,
+        volume,
+        quantity: position.quantity,
+        score: Math.abs(moveBps)
+      };
+    }
+
+    const reasons = [];
+    if (!quote || quote.error || !price) reasons.push(quote.error || "No usable price from Yahoo Finance.");
+    if (openSlots <= 0) reasons.push(`Maximum open positions reached (${controls.maxOpenPositions}).`);
+    if (price && controls.maxAllocationPerTrade < price) reasons.push(`Price $${price.toFixed(2)} is above the per-trade allocation $${Number(controls.maxAllocationPerTrade || 0).toFixed(2)}.`);
+    if (changePercent < 0.3) reasons.push(`Momentum ${changePercent.toFixed(2)}% is below the 0.30% buy threshold.`);
+    if (volume < controls.minVolume) reasons.push(`Volume ${volume.toLocaleString()} is below the ${Number(controls.minVolume || 0).toLocaleString()} minimum.`);
+    if (spreadBps > controls.maxSpreadBps) reasons.push(`Spread ${spreadBps.toFixed(0)} bps is above the ${controls.maxSpreadBps} bps limit.`);
+    if (!reasons.length) reasons.push("Passed basic checks but ranked below stronger candidates or no position slot was available.");
+
+    return {
+      symbol,
+      market: settings.market,
+      action: "SKIP",
+      decision: "No buy",
+      reason: reasons.join(" "),
+      price,
+      changePercent,
+      volume,
+      quantity: 0,
+      score: candidate?.score || 0
+    };
+  });
+}
+
 function createTradingService({ store }) {
   return {
     async getAccount({ user, settings }) {
@@ -206,6 +289,14 @@ function createTradingService({ store }) {
         controls: strategy,
         scanCandidates
       });
+      const assessment = buildStrategyAssessment({
+        settings,
+        portfolio,
+        quotes,
+        controls: strategy,
+        scanCandidates,
+        plan
+      });
       const executed = [];
 
       if (execute) {
@@ -233,8 +324,10 @@ function createTradingService({ store }) {
           ? `Strategy run complete. ${executed.length} order(s) submitted.`
           : `Strategy preview complete. ${plan.length} candidate action(s) found.`,
         generatedAt: new Date().toISOString(),
+        market: settings.market,
         strategyId: settings.strategyId,
         strategyName: strategyDefinition.name,
+        assessment,
         plan,
         executed
       };

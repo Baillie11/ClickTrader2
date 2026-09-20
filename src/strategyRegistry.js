@@ -178,7 +178,7 @@ const STRATEGIES = [
   {
     id: "small-account-day-trader",
     name: "Small Account Day Trader",
-    description: "Designed for a $100 paper account. Uses scanner candidates to find affordable, high-momentum day trades with a 1.5% target profit and 0.75% stop loss.",
+    description: "Designed for a $500 paper account. Uses scanner candidates to find affordable, high-momentum day trades with a 1.5% target profit and 0.75% stop loss.",
     evaluate: evaluateSmallAccountDayTrader
   }
 ];

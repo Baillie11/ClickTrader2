@@ -2,6 +2,10 @@ const fs = require("fs");
 const path = require("path");
 const { randomUUID } = require("crypto");
 
+function simulatedStartingCash() {
+  return Number(process.env.SIMULATED_STARTING_CASH || 500);
+}
+
 const DEFAULT_SETTINGS = {
   tradeMode: process.env.DEFAULT_TRADE_MODE || "paper",
   market: process.env.DEFAULT_MARKET || "nasdaq",
@@ -45,10 +49,10 @@ const DEFAULT_STRATEGY = {
   targetProfitBps: 150,
   stopLossBps: 75,
   maxSpreadBps: 50,
-  maxAllocationPerTrade: 25,
+  maxAllocationPerTrade: 125,
   maxOpenPositions: 3,
   cooldownSeconds: 60,
-  minVolume: 100000,
+  minVolume: 50000,
   lastRunAt: null
 };
 
@@ -59,7 +63,7 @@ function nowIso() {
 function ensureStore(filePath) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   if (!fs.existsSync(filePath)) {
-    const startingCash = Number(process.env.SIMULATED_STARTING_CASH || 100);
+    const startingCash = simulatedStartingCash();
     fs.writeFileSync(
       filePath,
       JSON.stringify({
@@ -139,12 +143,38 @@ function createStore(filePath) {
     data.tradeLogs = data.tradeLogs || {};
     data.tradeLogs[userId] = data.tradeLogs[userId] || [];
     data.scans[userId] = data.scans[userId] || null;
+    const startingCash = simulatedStartingCash();
     data.simulatedAccounts[userId] = data.simulatedAccounts[userId] || {
-      cash: Number(process.env.SIMULATED_STARTING_CASH || 100),
-      buyingPower: Number(process.env.SIMULATED_STARTING_CASH || 100),
-      equity: Number(process.env.SIMULATED_STARTING_CASH || 100),
+      cash: startingCash,
+      buyingPower: startingCash,
+      equity: startingCash,
       positions: []
     };
+    const account = data.simulatedAccounts[userId];
+    const hasActivity = (data.orders[userId] || []).length > 0
+      || (data.trades[userId] || []).length > 0
+      || (data.portfolios[userId] || []).length > 0;
+    const untouchedAccount = !hasActivity
+      && Number(account.cash || 0) <= 100
+      && Number(account.buyingPower || 0) <= 100
+      && Number(account.equity || 0) <= 100;
+    if (untouchedAccount && startingCash > Number(account.equity || 0)) {
+      data.simulatedAccounts[userId] = {
+        ...account,
+        cash: startingCash,
+        buyingPower: startingCash,
+        equity: startingCash,
+        positions: account.positions || []
+      };
+    }
+    if (untouchedAccount && Number(data.strategies[userId].maxAllocationPerTrade || 0) <= 25) {
+      data.strategies[userId] = {
+        ...data.strategies[userId],
+        maxAllocationPerTrade: 125,
+        minVolume: Math.min(Number(data.strategies[userId].minVolume || 50000), 50000),
+        updatedAt: nowIso()
+      };
+    }
   }
 
   return {
@@ -417,14 +447,26 @@ function createStore(filePath) {
     saveScan(userId, scan) {
       return mutate((data) => {
         ensureUserBuckets(data, userId);
-        data.scans[userId] = { ...scan, savedAt: nowIso() };
+        const saved = { ...scan, savedAt: nowIso() };
+        const current = data.scans[userId] || {};
+        const byMarket = current.byMarket || {};
+        if (scan.market) byMarket[scan.market] = saved;
+        data.scans[userId] = {
+          latest: saved,
+          byMarket
+        };
       });
     },
 
-    getLastScan(userId) {
+    getLastScan(userId, market = null) {
       const data = read();
       ensureUserBuckets(data, userId);
-      return data.scans[userId];
+      const scans = data.scans[userId];
+      if (!scans) return null;
+      if (market && scans.byMarket?.[market]) return scans.byMarket[market];
+      if (scans.latest) return scans.latest;
+      if (market && scans.market && scans.market !== market) return null;
+      return scans;
     },
 
     recordPaperPhaseStart(userId) {

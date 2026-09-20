@@ -31,6 +31,7 @@ const autoScanCache = {};
 const AUTO_SCAN_INTERVAL = Number(process.env.AUTO_SCAN_INTERVAL_MINUTES || 15);
 const AUTO_PAPER_TRADING_ENABLED = process.env.AUTO_PAPER_TRADING !== "false";
 let autoPaperCycleRunning = false;
+let lastAutoPaperWakeAt = 0;
 
 async function runAutoScan(market, budget) {
   try {
@@ -87,6 +88,16 @@ async function runAutomaticPaperTrades() {
   } finally {
     autoPaperCycleRunning = false;
   }
+}
+
+function wakeAutomaticPaperTrades() {
+  if (!AUTO_PAPER_TRADING_ENABLED) return;
+  const minimumGapMs = Math.max(1, AUTO_SCAN_INTERVAL) * 60 * 1000;
+  if (Date.now() - lastAutoPaperWakeAt < minimumGapMs) return;
+  lastAutoPaperWakeAt = Date.now();
+  runAutomaticPaperTrades().catch((error) => {
+    console.error("[AutoPaper] Wake cycle error:", error.message);
+  });
 }
 
 // Schedule auto-scans during market hours for enabled markets
@@ -226,6 +237,9 @@ app.use((req, res, next) => {
     error: req.flash("error"),
     warning: req.flash("warning")
   };
+  if (user && req.method === "GET" && !req.path.startsWith("/assets/")) {
+    wakeAutomaticPaperTrades();
+  }
   next();
 });
 
@@ -470,6 +484,7 @@ async function renderTradeDesk(req, res, next) {
 
     // Merge watchlist with scanner candidates so all symbols get quotes
     const cached = autoScanCache[settings.market];
+    const lastStrategyScan = store.getLastScan(user.id, settings.market);
     const scanCandidates = cached ? cached.candidates : [];
     const candidateSymbols = scanCandidates.map((c) => c.symbol);
 
@@ -511,6 +526,7 @@ async function renderTradeDesk(req, res, next) {
       paperPhase,
       scanCandidates,
       scanScannedAt: cached ? cached.scannedAt : null,
+      lastStrategyScan,
       autoScanIntervalMinutes: AUTO_SCAN_INTERVAL
     });
   } catch (error) {
