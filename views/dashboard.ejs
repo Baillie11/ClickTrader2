@@ -111,6 +111,37 @@
   </div>
 </section>
 
+<section class="panel priority-actions">
+  <div class="panel-title">
+    <h2>Recent Orders</h2>
+    <span>Latest 12</span>
+  </div>
+  <div class="activity-list">
+    <% if (!orders.length) { %><p>No orders yet.</p><% } %>
+    <% orders.forEach((order) => { %>
+      <% const isSale = String(order.side || "").toLowerCase() === "sell"; %>
+      <% const rawSalePl = order.tradeProfitLoss; %>
+      <% const rawSalePlPercent = order.tradeProfitLossPercent; %>
+      <% const salePl = Number(rawSalePl); %>
+      <% const salePlPercent = Number(rawSalePlPercent); %>
+      <% const hasSalePl = isSale && rawSalePl !== null && rawSalePl !== undefined && rawSalePlPercent !== null && rawSalePlPercent !== undefined && Number.isFinite(salePl) && Number.isFinite(salePlPercent); %>
+      <article>
+        <strong><%= order.side.toUpperCase() %> <%= order.quantity %> <%= order.symbol %></strong>
+        <span><%= order.provider %> &middot; <%= order.status %> &middot; <%= new Date(order.createdAt).toLocaleString() %></span>
+        <% if (isSale) { %>
+          <% if (hasSalePl) { %>
+            <span class="order-pl <%= salePl >= 0 ? "positive" : "negative" %>">
+              Sale P/L <%= salePl >= 0 ? "+" : "" %>$<%= salePl.toFixed(2) %> (<%= salePlPercent >= 0 ? "+" : "" %><%= salePlPercent.toFixed(2) %>%)
+            </span>
+          <% } else { %>
+            <span class="order-pl">Sale P/L pending</span>
+          <% } %>
+        <% } %>
+      </article>
+    <% }) %>
+  </div>
+</section>
+
 <% if (settings.note) { %>
   <section class="notice">
     <%= settings.note %>
@@ -419,7 +450,7 @@ async function refreshScan() {
   </div>
 </section>
 
-<section class="grid two-columns">
+<section class="grid">
   <div class="panel">
     <div class="panel-title">
       <h2>Open Positions</h2>
@@ -451,22 +482,6 @@ async function refreshScan() {
           <% }) %>
         </tbody>
       </table>
-    </div>
-  </div>
-
-  <div class="panel">
-    <div class="panel-title">
-      <h2>Recent Orders</h2>
-      <span>Latest 12</span>
-    </div>
-    <div class="activity-list">
-      <% if (!orders.length) { %><p>No orders yet.</p><% } %>
-      <% orders.forEach((order) => { %>
-        <article>
-          <strong><%= order.side.toUpperCase() %> <%= order.quantity %> <%= order.symbol %></strong>
-          <span><%= order.provider %> · <%= order.status %> · <%= new Date(order.createdAt).toLocaleString() %></span>
-        </article>
-      <% }) %>
     </div>
   </div>
 </section>

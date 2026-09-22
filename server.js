@@ -466,6 +466,33 @@ function deskPath(req) {
   return `/trade/${getDeskKey(req.params.desk)}`;
 }
 
+function enrichOrdersWithTradeResults(orders, trades) {
+  const unmatchedTrades = [...trades];
+
+  return orders.map((order) => {
+    const orderTime = new Date(order.createdAt || 0).getTime();
+    const matchIndex = unmatchedTrades.findIndex((trade) => {
+      const tradeTime = new Date(trade.createdAt || 0).getTime();
+      const closeEnough = Number.isFinite(orderTime) && Number.isFinite(tradeTime)
+        ? Math.abs(tradeTime - orderTime) < 5 * 60 * 1000
+        : true;
+
+      return closeEnough
+        && String(trade.symbol || "").toUpperCase() === String(order.symbol || "").toUpperCase()
+        && String(trade.side || "").toLowerCase() === String(order.side || "").toLowerCase()
+        && Number(trade.quantity || 0) === Number(order.quantity || 0);
+    });
+
+    const trade = matchIndex >= 0 ? unmatchedTrades.splice(matchIndex, 1)[0] : null;
+    return {
+      ...order,
+      tradeProfitLoss: trade?.profitLoss ?? order.profitLoss ?? null,
+      tradeProfitLossPercent: trade?.profitLossPercent ?? order.profitLossPercent ?? null,
+      tradeStrategyName: trade?.strategyName || order.strategyName || null
+    };
+  });
+}
+
 async function renderTradeDesk(req, res, next) {
   try {
     const user = store.getUserById(req.session.userId);
@@ -478,7 +505,7 @@ async function renderTradeDesk(req, res, next) {
     });
     const strategy = store.getStrategy(user.id);
     const trades = store.getTrades(user.id).slice(0, 12);
-    const orders = store.getOrders(user.id).slice(0, 12);
+    const orders = enrichOrdersWithTradeResults(store.getOrders(user.id).slice(0, 12), trades);
     const account = await tradingService.getAccount({ user, settings });
     const paperPhase = store.getPaperPhase(user.id);
 

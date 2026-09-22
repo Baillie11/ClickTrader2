@@ -425,6 +425,10 @@ tr:last-child td {
   border-radius: 8px;
 }
 
+.order-pl {
+  margin-top: 4px;
+}
+
 .settings-form {
   display: grid;
   gap: 16px;
