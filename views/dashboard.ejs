@@ -64,6 +64,53 @@
   <% } %>
 </section>
 
+<section class="panel priority-actions" id="strategy-assessment-panel">
+  <div class="panel-title">
+    <h2>App Actions</h2>
+    <span>
+      <% if (lastStrategyScan && lastStrategyScan.generatedAt) { %>
+        <%= lastStrategyScan.strategyName || "Strategy" %> &middot; <%= new Date(lastStrategyScan.generatedAt).toLocaleString() %>
+      <% } else { %>
+        Waiting for the first strategy assessment
+      <% } %>
+    </span>
+  </div>
+  <div class="table-shell compact">
+    <table>
+      <thead>
+        <tr>
+          <th>Symbol</th>
+          <th>Decision</th>
+          <th>Price</th>
+          <th>Move</th>
+          <th>Volume</th>
+          <th>Qty</th>
+          <th>Reason</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% const assessment = (lastStrategyScan && lastStrategyScan.assessment) || []; %>
+        <% if (!assessment.length) { %>
+          <tr><td colspan="7">No app actions yet. The next automatic paper cycle or manual strategy scan will show buy, sell, hold, and skip reasons here.</td></tr>
+        <% } %>
+        <% assessment.forEach((item) => { %>
+          <tr>
+            <td><strong><%= item.symbol %></strong></td>
+            <td><span class="status-pill status-<%= String(item.action || 'skip').toLowerCase() %>"><%= item.action %></span> <%= item.decision %></td>
+            <td>$<%= Number(item.price || 0).toFixed(2) %></td>
+            <td class="<%= Number(item.changePercent || 0) >= 0 ? 'positive' : 'negative' %>">
+              <%= Number(item.changePercent || 0) >= 0 ? '+' : '' %><%= Number(item.changePercent || 0).toFixed(2) %>%
+            </td>
+            <td><%= Number(item.volume || 0).toLocaleString() %></td>
+            <td><%= item.quantity || '-' %></td>
+            <td><small><%= item.reason %></small></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</section>
+
 <% if (settings.note) { %>
   <section class="notice">
     <%= settings.note %>
@@ -303,53 +350,6 @@
             <td><%= (c.volume / 1000).toFixed(0) %>k</td>
             <td><%= c.sharesPerSlot %></td>
             <td><small><%= c.reason %></small></td>
-          </tr>
-        <% }) %>
-      </tbody>
-    </table>
-  </div>
-</section>
-
-<section class="panel" id="strategy-assessment-panel">
-  <div class="panel-title">
-    <h2>Strategy Assessment</h2>
-    <span>
-      <% if (lastStrategyScan && lastStrategyScan.generatedAt) { %>
-        <%= lastStrategyScan.strategyName || "Strategy" %> &middot; <%= new Date(lastStrategyScan.generatedAt).toLocaleString() %>
-      <% } else { %>
-        Waiting for the first strategy assessment
-      <% } %>
-    </span>
-  </div>
-  <div class="table-shell compact">
-    <table>
-      <thead>
-        <tr>
-          <th>Symbol</th>
-          <th>Decision</th>
-          <th>Price</th>
-          <th>Move</th>
-          <th>Volume</th>
-          <th>Qty</th>
-          <th>Reason</th>
-        </tr>
-      </thead>
-      <tbody>
-        <% const assessment = (lastStrategyScan && lastStrategyScan.assessment) || []; %>
-        <% if (!assessment.length) { %>
-          <tr><td colspan="7">No assessment yet. The next automatic paper cycle or manual strategy scan will show buy, sell, hold, and skip reasons here.</td></tr>
-        <% } %>
-        <% assessment.forEach((item) => { %>
-          <tr>
-            <td><strong><%= item.symbol %></strong></td>
-            <td><span class="status-pill status-<%= String(item.action || 'skip').toLowerCase() %>"><%= item.action %></span> <%= item.decision %></td>
-            <td>$<%= Number(item.price || 0).toFixed(2) %></td>
-            <td class="<%= Number(item.changePercent || 0) >= 0 ? 'positive' : 'negative' %>">
-              <%= Number(item.changePercent || 0) >= 0 ? '+' : '' %><%= Number(item.changePercent || 0).toFixed(2) %>%
-            </td>
-            <td><%= Number(item.volume || 0).toLocaleString() %></td>
-            <td><%= item.quantity || '-' %></td>
-            <td><small><%= item.reason %></small></td>
           </tr>
         <% }) %>
       </tbody>

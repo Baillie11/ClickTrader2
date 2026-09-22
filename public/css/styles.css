@@ -251,6 +251,10 @@ h2 {
   padding: 18px;
 }
 
+.priority-actions {
+  margin-bottom: 16px;
+}
+
 .panel-title {
   display: flex;
   justify-content: space-between;
