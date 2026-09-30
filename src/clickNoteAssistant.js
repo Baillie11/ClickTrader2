@@ -58,7 +58,7 @@ async function createReportDrafts(payload) {
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      model: process.env.CLICK_NOTE_AI_MODEL || "gpt-5",
+      model: process.env.CLICK_NOTE_AI_MODEL || process.env.OPENAI_REPORT_MODEL || "gpt-5-mini",
       store: false,
       instructions: [
         "You assist an Australian disability support worker to draft factual end-of-shift responses.",
