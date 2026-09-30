@@ -19,6 +19,7 @@ const { createTradingService } = require("./src/trading/tradingService");
 const { getStrategies, getStrategyById } = require("./src/strategyRegistry");
 const { scanDayTradeCandidates } = require("./src/scanner");
 const { hasAlpacaCredentials } = require("./src/trading/alpacaEngine");
+const { registerClickNoteAssistant } = require("./src/clickNoteAssistant");
 
 const app = express();
 const store = createStore(path.join(__dirname, "data", "store.json"));
@@ -167,6 +168,8 @@ app.use(helmet({ contentSecurityPolicy: false }));
 app.use(compression());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+
+registerClickNoteAssistant(app, rateLimit);
 
 app.get("/manifest.webmanifest", (req, res) => {
   res.type("application/manifest+json");
